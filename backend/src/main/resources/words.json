@@ -1,0 +1,47 @@
+{
+  "easy": [
+    "cat", "dog", "sun", "moon", "tree", "house", "car", "fish", "bird", "boat",
+    "ball", "book", "cake", "door", "eye", "fire", "gift", "hand", "ice", "key",
+    "lamp", "mouse", "nose", "orange", "pig", "queen", "rain", "star", "table", "apple",
+    "baby", "bear", "bed", "bee", "box", "bread", "bridge", "broom", "bus", "butter",
+    "camera", "candle", "chair", "cheese", "chicken", "clock", "cloud", "coat", "cow", "cup",
+    "desk", "doctor", "dragon", "dress", "drum", "duck", "ear", "earth", "egg", "fan",
+    "flag", "flower", "frog", "glass", "grass", "hat", "heart", "horse", "island", "jacket",
+    "king", "kite", "knife", "leaf", "lemon", "lion", "milk", "mirror", "money", "monkey",
+    "mountain", "nest", "ocean", "onion", "paper", "pencil", "phone", "pizza", "plane", "plate",
+    "river", "robot", "rock", "rope", "rose", "sheep", "ship", "shoe", "snake", "snow"
+  ],
+  "medium": [
+    "airplane", "basketball", "butterfly", "computer", "dinosaur", "elephant",
+    "fireworks", "giraffe", "hamburger", "iceberg", "jellyfish", "kangaroo",
+    "lightning", "mushroom", "newspaper", "octopus", "penguin", "rainbow",
+    "sandwich", "telescope", "umbrella", "volcano", "waterfall", "xylophone",
+    "accordion", "ambulance", "astronaut", "backpack", "barbecue", "baseball",
+    "blanket", "bracelet", "calendar", "campfire", "carnival", "caterpillar",
+    "celebrate", "centipede", "chocolate", "christmas", "compass", "cowboy",
+    "cucumber", "curtain", "detective", "diamond", "dragonfly", "elevator",
+    "envelope", "escalator", "flamingo", "flashlight", "football", "fountain",
+    "goldfish", "graduation", "grasshopper", "greenhouse", "hammock", "handcuffs",
+    "hedgehog", "helicopter", "honeybee", "horseshoe", "hourglass", "hummingbird",
+    "hurricane", "igloo", "jewelry", "keyboard", "ladybug", "lantern",
+    "library", "lighthouse", "lobster", "magician", "mailbox", "mermaid",
+    "microwave", "mosquito", "motorcycle", "necklace", "nightmare", "olympics",
+    "parachute", "peacock", "pineapple", "pirate", "playground", "porcupine"
+  ],
+  "hard": [
+    "bluetooth", "camouflage", "democracy", "ecosystem", "electricity",
+    "frequency", "generation", "hibernate", "infinity", "kaleidoscope",
+    "labyrinth", "metamorphosis", "mythology", "navigation", "orchestra",
+    "philosophy", "quicksand", "reflection", "silhouette", "trampoline",
+    "advertisement", "anniversary", "architecture", "atmosphere", "biodiversity",
+    "brotherhood", "carnivorous", "catastrophe", "celebration", "championship",
+    "civilization", "collaboration", "communication", "concentration", "conscience",
+    "constellation", "controversial", "conversation", "cooperation", "coordination",
+    "deforestation", "demonstration", "determination", "disappointment", "discrimination",
+    "encyclopedia", "engineering", "entertainment", "environment", "exaggeration",
+    "examination", "experimentation", "extraordinary", "fascination", "fingerprint",
+    "firefighter", "globalization", "hallucination", "homesickness", "hospitality",
+    "imagination", "independence", "inflammation", "infrastructure", "inspiration",
+    "intelligence", "introduction", "investigation", "kindergarten", "manifestation"
+  ]
+}
