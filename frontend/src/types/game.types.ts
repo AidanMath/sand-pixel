@@ -24,7 +24,6 @@ export interface RoomSettings {
   totalRounds: number;
   drawTime: number;
   revealTime: number;
-  difficulty: 'easy' | 'medium' | 'hard';
 }
 
 // Game state
@@ -79,6 +78,7 @@ export type GameEventType =
   | 'COUNTDOWN'
   | 'ROUND_START'
   | 'WORD_OPTIONS'
+  | 'WORD_SELECTED'
   | 'DRAWING_PHASE'
   | 'REVEAL_PHASE'
   | 'CORRECT_GUESS'
@@ -120,12 +120,17 @@ export interface WordOptionsPayload {
   words: string[];
 }
 
+export interface WordSelectedPayload {
+  word: string;
+}
+
 export interface DrawingPhasePayload {
   drawTime: number;
+  wordLength: number;
+  wordHint: string;
 }
 
 export interface RevealPhasePayload {
-  drawingBase64: string;
   word: string;
 }
 
@@ -173,6 +178,7 @@ export interface RoomResponse {
   success: boolean;
   error?: string;
   room?: Room;
+  sessionId?: string;
 }
 
 // Default settings
@@ -181,5 +187,4 @@ export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   totalRounds: 3,
   drawTime: 80,
   revealTime: 30,
-  difficulty: 'medium',
 };

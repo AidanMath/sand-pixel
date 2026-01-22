@@ -9,8 +9,9 @@ import type {
   RoundEndPayload,
   GameOverPayload,
 } from '../types/game.types';
-
-type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
+import type { ConnectionStatus } from '../types/connection.types';
+import { STORAGE_KEYS } from '../constants/storage.constants';
+import { LIMITS } from '../constants/limits.constants';
 
 interface GameStore {
   // Connection
@@ -27,7 +28,6 @@ interface GameStore {
   currentWordHint: string;
   currentWordLength: number;
   drawTime: number;
-  revealDrawing: string | null;
   revealWord: string | null;
   closeGuess: boolean;
   roundEndData: RoundEndPayload | null;
@@ -47,14 +47,16 @@ interface GameStore {
   setCountdown: (seconds: number) => void;
   setRoundInfo: (info: RoundStartPayload) => void;
   setWordOptions: (words: string[]) => void;
-  setDrawingPhase: (drawTime: number) => void;
-  setRevealPhase: (drawing: string, word: string) => void;
+  setDrawingPhase: (drawTime: number, wordLength?: number, wordHint?: string) => void;
+  setRevealPhase: (word: string) => void;
   addCorrectGuesser: (data: CorrectGuessPayload) => void;
-  setCloseGuess: (playerId: string) => void;
+  setCloseGuess: (value: boolean) => void;
+  handleCloseGuess: (playerId: string) => void;
   setRoundEnd: (data: RoundEndPayload) => void;
   setGameOver: (data: GameOverPayload) => void;
   addChatMessage: (message: ChatMessage) => void;
   setHint: (hint: string) => void;
+  setSelectedWord: (word: string) => void;
   reset: () => void;
 
   // Computed helpers
@@ -63,6 +65,34 @@ interface GameStore {
   isDrawer: () => boolean;
   getPlayerList: () => Player[];
   getPhase: () => GamePhase;
+
+  // Persistence
+  getPersistedSession: () => PersistedSession | null;
+  persistSession: (roomId: string, playerName: string) => void;
+  clearPersistedSession: () => void;
+}
+
+// Persistence types and helpers
+interface PersistedSession {
+  roomId: string;
+  playerName: string;
+}
+
+function loadPersistedSession(): PersistedSession | null {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.GAME_SESSION);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedSession(roomId: string, playerName: string) {
+  localStorage.setItem(STORAGE_KEYS.GAME_SESSION, JSON.stringify({ roomId, playerName }));
+}
+
+function clearStoredSession() {
+  localStorage.removeItem(STORAGE_KEYS.GAME_SESSION);
 }
 
 const initialState = {
@@ -75,7 +105,6 @@ const initialState = {
   currentWordHint: '',
   currentWordLength: 0,
   drawTime: 80,
-  revealDrawing: null,
   revealWord: null,
   closeGuess: false,
   roundEndData: null,
@@ -137,7 +166,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     }),
 
-  setCountdown: (seconds) => set({ countdown: seconds }),
+  setCountdown: (seconds) =>
+    set((state) => {
+      if (!state.room) return { countdown: seconds };
+      return {
+        countdown: seconds,
+        room: {
+          ...state.room,
+          gameState: {
+            ...state.room.gameState,
+            phase: 'COUNTDOWN',
+          },
+        },
+      };
+    }),
 
   setRoundInfo: (info) =>
     set((state) => {
@@ -149,6 +191,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             ...state.room.gameState,
             currentRound: info.round,
             currentDrawerId: info.drawerId,
+            phase: 'WORD_SELECTION',
           },
         },
         currentWordHint: info.wordHint,
@@ -159,9 +202,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     }),
 
-  setWordOptions: (words) => set({ wordOptions: words }),
+  setWordOptions: (words) =>
+    set((state) => {
+      if (!state.room) return { wordOptions: words };
+      return {
+        wordOptions: words,
+        room: {
+          ...state.room,
+          gameState: {
+            ...state.room.gameState,
+            phase: 'WORD_SELECTION',
+          },
+        },
+      };
+    }),
 
-  setDrawingPhase: (drawTime) =>
+  setDrawingPhase: (drawTime, wordLength, wordHint) =>
     set((state) => {
       if (!state.room) return state;
       return {
@@ -174,10 +230,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
         drawTime,
         wordOptions: null,
+        currentWordLength: wordLength ?? state.currentWordLength,
+        currentWordHint: wordHint ?? state.currentWordHint,
       };
     }),
 
-  setRevealPhase: (drawing, word) =>
+  setRevealPhase: (word: string) =>
     set((state) => {
       if (!state.room) return state;
       return {
@@ -188,7 +246,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
             phase: 'REVEAL',
           },
         },
-        revealDrawing: drawing,
         revealWord: word,
       };
     }),
@@ -223,13 +280,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     }),
 
-  setCloseGuess: (playerId) => {
+  // Note: Side effect (auto-clear timeout) moved to useCloseGuessEffect hook
+  setCloseGuess: (value: boolean) => set({ closeGuess: value }),
+
+  // Check if close guess applies to current player and set it
+  handleCloseGuess: (playerId: string) => {
     const state = get();
     const myPlayer = state.getMyPlayer();
     if (myPlayer && myPlayer.id === playerId) {
       set({ closeGuess: true });
-      // Clear after 2 seconds
-      setTimeout(() => set({ closeGuess: false }), 2000);
     }
   },
 
@@ -280,10 +339,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   addChatMessage: (message) =>
     set((state) => ({
-      chatMessages: [...state.chatMessages.slice(-99), message],
+      chatMessages: [...state.chatMessages.slice(-(LIMITS.MAX_CHAT_MESSAGES - 1)), message],
     })),
 
   setHint: (hint) => set({ currentWordHint: hint }),
+
+  setSelectedWord: (word) =>
+    set((state) => {
+      if (!state.room) return state;
+      return {
+        room: {
+          ...state.room,
+          gameState: {
+            ...state.room.gameState,
+            currentWord: word,
+          },
+        },
+      };
+    }),
 
   reset: () => set(initialState),
 
@@ -317,4 +390,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     return state.room?.gameState.phase || 'LOBBY';
   },
+
+  // Persistence
+  getPersistedSession: () => loadPersistedSession(),
+  persistSession: (roomId, playerName) => savePersistedSession(roomId, playerName),
+  clearPersistedSession: () => clearStoredSession(),
 }));

@@ -5,6 +5,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -29,10 +30,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // WebSocket endpoint that clients connect to
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
-                .withSockJS();
+                .withSockJS()
+                .setStreamBytesLimit(512 * 1024)        // 512KB for streaming
+                .setHttpMessageCacheSize(1000)          // Cache size
+                .setDisconnectDelay(30 * 1000);         // 30 second disconnect delay
 
         // Also register without SockJS for native WebSocket clients
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*");
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        // Increase message size limits to handle base64 encoded drawings
+        // Default is 64KB, increase to 512KB
+        registration.setMessageSizeLimit(512 * 1024);      // 512KB
+        registration.setSendBufferSizeLimit(1024 * 1024);  // 1MB
+        registration.setSendTimeLimit(60 * 1000);          // 60 seconds
     }
 }

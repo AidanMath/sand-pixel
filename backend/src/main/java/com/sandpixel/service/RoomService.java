@@ -32,6 +32,20 @@ public class RoomService {
             throw new IllegalArgumentException("Room not found");
         }
 
+        // Check if player is rejoining (same name, disconnected)
+        Player existingPlayer = room.findPlayerByName(playerName);
+        if (existingPlayer != null) {
+            // Rejoin: update session ID and mark as connected
+            String oldSessionId = existingPlayer.getSessionId();
+            room.updatePlayerSession(oldSessionId, sessionId);
+            sessionToRoom.remove(oldSessionId);
+            sessionToRoom.put(sessionId, room.getId());
+            existingPlayer.setConnected(true);
+            existingPlayer.setReady(false);
+            log.info("Player rejoined room: roomId={}, player={}", roomId, playerName);
+            return room;
+        }
+
         if (room.getGameState().getPhase() != GamePhase.LOBBY) {
             throw new IllegalStateException("Game already in progress");
         }

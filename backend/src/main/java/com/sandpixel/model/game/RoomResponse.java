@@ -7,11 +7,13 @@ public class RoomResponse {
     private boolean success;
     private String error;
     private Room room;
+    private String sessionId;
 
-    public static RoomResponse success(Room room) {
+    public static RoomResponse success(Room room, String sessionId) {
         RoomResponse response = new RoomResponse();
         response.setSuccess(true);
         response.setRoom(room);
+        response.setSessionId(sessionId);
         return response;
     }
 

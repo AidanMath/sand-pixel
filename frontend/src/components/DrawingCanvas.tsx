@@ -69,6 +69,9 @@ export function DrawingCanvas({
       applyStroke(ctx, stroke);
     });
     processedStrokesRef.current = remoteStrokes.length;
+
+    // Notify about drawing changes from remote strokes
+    notifyDrawingChange();
   }, [remoteStrokes]);
 
   const saveToUndoStack = useCallback(() => {

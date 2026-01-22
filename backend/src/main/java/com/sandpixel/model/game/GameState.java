@@ -10,7 +10,8 @@ public class GameState {
     private GamePhase phase = GamePhase.LOBBY;
     private int currentRound = 0;
     private int totalRounds;
-    private String currentDrawerId;
+    private String currentDrawerId;  // Player ID (for frontend)
+    private transient String currentDrawerSessionId;  // Session ID (for backend routing, not serialized)
     private String currentWord;
     private String[] wordOptions;
     private String drawingBase64;
@@ -22,9 +23,10 @@ public class GameState {
         this.totalRounds = totalRounds;
     }
 
-    public void startNewRound(String drawerId, String[] wordOptions) {
+    public void startNewRound(String drawerSessionId, String drawerPlayerId, String[] wordOptions) {
         this.currentRound++;
-        this.currentDrawerId = drawerId;
+        this.currentDrawerSessionId = drawerSessionId;
+        this.currentDrawerId = drawerPlayerId;
         this.wordOptions = wordOptions;
         this.currentWord = null;
         this.drawingBase64 = null;
@@ -40,8 +42,7 @@ public class GameState {
         this.phaseStartTime = Instant.now();
     }
 
-    public void startReveal(String drawingBase64) {
-        this.drawingBase64 = drawingBase64;
+    public void startReveal() {
         this.phase = GamePhase.REVEAL;
         this.phaseStartTime = Instant.now();
     }

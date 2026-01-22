@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom';
 
+// Mock scrollIntoView
+Element.prototype.scrollIntoView = vi.fn();
+
 // Mock WebGL context
 class MockWebGL2RenderingContext {
   canvas = { width: 800, height: 600 };

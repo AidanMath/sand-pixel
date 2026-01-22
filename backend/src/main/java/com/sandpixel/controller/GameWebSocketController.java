@@ -1,6 +1,7 @@
 package com.sandpixel.controller;
 
 import com.sandpixel.model.game.*;
+import com.sandpixel.service.BroadcastService;
 import com.sandpixel.service.GameService;
 import com.sandpixel.service.RoomService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class GameWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final RoomService roomService;
     private final GameService gameService;
+    private final BroadcastService broadcastService;
 
     @EventListener
     public void handleWebSocketConnect(SessionConnectEvent event) {
@@ -35,6 +37,13 @@ public class GameWebSocketController {
     public void handleWebSocketDisconnect(SessionDisconnectEvent event) {
         String sessionId = event.getSessionId();
         log.info("WebSocket disconnected: sessionId={}", sessionId);
+
+        // Get room before handling disconnect
+        String roomId = roomService.getRoomIdForSession(sessionId);
+        if (roomId != null) {
+            gameService.handlePlayerDisconnect(roomId, sessionId);
+        }
+
         roomService.handleDisconnect(sessionId);
     }
 
@@ -46,7 +55,7 @@ public class GameWebSocketController {
         log.info("Creating room: playerName={}, sessionId={}", request.getPlayerName(), sessionId);
 
         Room room = roomService.createRoom(request.getPlayerName(), sessionId, request.getSettings());
-        return RoomResponse.success(room);
+        return RoomResponse.success(room, sessionId);
     }
 
     @MessageMapping("/room/join")
@@ -60,10 +69,10 @@ public class GameWebSocketController {
         try {
             Room room = roomService.joinRoom(request.getRoomId(), request.getPlayerName(), sessionId);
 
-            // Broadcast player joined to all in room
-            broadcastToRoom(room.getId(), GameEvent.playerJoined(room, room.getPlayer(sessionId)));
+            broadcastService.broadcastToRoom(room.getId(),
+                GameEvent.playerJoined(room, room.getPlayer(sessionId)));
 
-            return RoomResponse.success(room);
+            return RoomResponse.success(room, sessionId);
         } catch (IllegalArgumentException | IllegalStateException e) {
             return RoomResponse.error(e.getMessage());
         }
@@ -79,7 +88,7 @@ public class GameWebSocketController {
         Room room = roomService.leaveRoom(roomId, sessionId);
 
         if (room != null && player != null) {
-            broadcastToRoom(roomId, GameEvent.playerLeft(room, player));
+            broadcastService.broadcastToRoom(roomId, GameEvent.playerLeft(room, player));
         }
     }
 
@@ -90,7 +99,7 @@ public class GameWebSocketController {
         Room room = roomService.toggleReady(roomId, sessionId);
 
         if (room != null) {
-            broadcastToRoom(roomId, GameEvent.roomState(room));
+            broadcastService.broadcastToRoom(roomId, GameEvent.roomState(room));
         }
     }
 
@@ -101,12 +110,12 @@ public class GameWebSocketController {
         Room room = roomService.getRoom(roomId);
 
         if (room == null) {
-            sendError(sessionId, "Room not found");
+            broadcastService.sendError(sessionId, "Room not found");
             return;
         }
 
         if (!room.getHostId().equals(sessionId)) {
-            sendError(sessionId, "Only host can start the game");
+            broadcastService.sendError(sessionId, "Only host can start the game");
             return;
         }
 
@@ -131,11 +140,10 @@ public class GameWebSocketController {
         if (room == null) return;
 
         GameState state = room.getGameState();
-        if (state == null || !sessionId.equals(state.getCurrentDrawerId())) {
-            return; // Only drawer can send strokes
+        if (state == null || !sessionId.equals(state.getCurrentDrawerSessionId())) {
+            return;
         }
 
-        // Broadcast stroke to all other players (not back to drawer)
         messagingTemplate.convertAndSend(
             "/topic/room/" + roomId + "/draw",
             stroke
@@ -144,10 +152,10 @@ public class GameWebSocketController {
 
     @MessageMapping("/room/{roomId}/submit-drawing")
     public void submitDrawing(@DestinationVariable String roomId,
-                              @Payload SubmitDrawingRequest request,
                               SimpMessageHeaderAccessor headerAccessor) {
         String sessionId = headerAccessor.getSessionId();
-        gameService.submitDrawing(roomId, sessionId, request.getDrawingBase64());
+        log.info("submitDrawing received: roomId={}, sessionId={}", roomId, sessionId);
+        gameService.submitDrawing(roomId, sessionId);
     }
 
     @MessageMapping("/room/{roomId}/guess")
@@ -170,20 +178,7 @@ public class GameWebSocketController {
             message.setPlayerName(player.getName());
             message.setTimestamp(System.currentTimeMillis());
 
-            broadcastToRoom(roomId, GameEvent.chat(message));
+            broadcastService.broadcastToRoom(roomId, GameEvent.chat(message));
         }
-    }
-
-    public void broadcastToRoom(String roomId, GameEvent event) {
-        messagingTemplate.convertAndSend("/topic/room/" + roomId, event);
-    }
-
-    public void sendToPlayer(String sessionId, GameEvent event) {
-        messagingTemplate.convertAndSendToUser(sessionId, "/queue/game", event);
-    }
-
-    private void sendError(String sessionId, String message) {
-        messagingTemplate.convertAndSendToUser(sessionId, "/queue/error",
-            GameEvent.error(message));
     }
 }

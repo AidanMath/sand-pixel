@@ -2,6 +2,8 @@ package com.sandpixel.service;
 
 import com.sandpixel.model.game.Player;
 import com.sandpixel.model.game.Room;
+import com.sandpixel.service.validation.GuessValidator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -10,9 +12,16 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Handles point calculation for guessers and drawers.
+ * Validation logic has been extracted to GuessValidator.
+ */
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class ScoringService {
+
+    private final GuessValidator guessValidator;
 
     private static final int MAX_GUESSER_POINTS = 500;
     private static final int FIRST_GUESS_BONUS = 100;
@@ -49,7 +58,7 @@ public class ScoringService {
                 scoreEntry.put("playerId", p.getId());
                 scoreEntry.put("playerName", p.getName());
                 scoreEntry.put("score", p.getScore());
-                scoreEntry.put("isDrawer", p.getSessionId().equals(room.getGameState().getCurrentDrawerId()));
+                scoreEntry.put("isDrawer", p.getId().equals(room.getGameState().getCurrentDrawerId()));
                 scoreEntry.put("guessedCorrectly", room.getGameState().hasGuessedCorrectly(p.getId()));
                 return scoreEntry;
             })
@@ -70,52 +79,30 @@ public class ScoringService {
             .collect(Collectors.toList());
     }
 
+    // Delegation methods to GuessValidator for backward compatibility
+    // New code should use GuessValidator directly
+
+    /**
+     * @deprecated Use GuessValidator.levenshteinDistance instead
+     */
+    @Deprecated
     public int levenshteinDistance(String s1, String s2) {
-        s1 = s1.toLowerCase();
-        s2 = s2.toLowerCase();
-
-        int[] costs = new int[s2.length() + 1];
-        for (int i = 0; i <= s1.length(); i++) {
-            int lastValue = i;
-            for (int j = 0; j <= s2.length(); j++) {
-                if (i == 0) {
-                    costs[j] = j;
-                } else if (j > 0) {
-                    int newValue = costs[j - 1];
-                    if (s1.charAt(i - 1) != s2.charAt(j - 1)) {
-                        newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-                    }
-                    costs[j - 1] = lastValue;
-                    lastValue = newValue;
-                }
-            }
-            if (i > 0) {
-                costs[s2.length()] = lastValue;
-            }
-        }
-        return costs[s2.length()];
+        return guessValidator.levenshteinDistance(s1, s2);
     }
 
+    /**
+     * @deprecated Use GuessValidator.isCloseGuess instead
+     */
+    @Deprecated
     public boolean isCloseGuess(String guess, String word) {
-        guess = guess.trim().toLowerCase();
-        word = word.toLowerCase();
-
-        // Exact match
-        if (guess.equals(word)) {
-            return false; // Not "close", it's correct
-        }
-
-        // Very short words need exact match
-        if (word.length() <= 3) {
-            return false;
-        }
-
-        // Allow distance proportional to word length
-        int maxDistance = word.length() <= 5 ? 1 : 2;
-        return levenshteinDistance(guess, word) <= maxDistance;
+        return guessValidator.isCloseGuess(guess, word);
     }
 
+    /**
+     * @deprecated Use GuessValidator.isCorrectGuess instead
+     */
+    @Deprecated
     public boolean isCorrectGuess(String guess, String word) {
-        return guess.trim().equalsIgnoreCase(word);
+        return guessValidator.isCorrectGuess(guess, word);
     }
 }

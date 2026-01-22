@@ -38,7 +38,8 @@ class WebSocketService {
         heartbeatIncoming: 10000,
         heartbeatOutgoing: 10000,
         debug: (str) => {
-          if (import.meta.env.DEV) {
+          // Only log important STOMP messages, not heartbeats
+          if (str.includes('SEND') || str.includes('MESSAGE') || str.includes('ERROR') || str.includes('CONNECT')) {
             console.log('[STOMP]', str);
           }
         },
@@ -82,11 +83,8 @@ class WebSocketService {
       this.roomCallbacks.forEach((cb) => cb(response));
     });
 
-    // Subscribe to user-specific game events (like word options)
-    this.subscribe('/user/queue/game', (message: IMessage) => {
-      const event: GameEvent = JSON.parse(message.body);
-      this.eventCallbacks.forEach((cb) => cb(event));
-    });
+    // Note: Player-specific game events (like word options) are subscribed
+    // via subscribeToPlayerEvents() after we know our session ID
 
     // Subscribe to error messages
     this.subscribe('/user/queue/error', (message: IMessage) => {
@@ -160,6 +158,14 @@ class WebSocketService {
     });
   }
 
+  // Subscribe to player-specific events (like word options)
+  subscribeToPlayerEvents(sessionId: string) {
+    this.subscribe(`/topic/player/${sessionId}`, (message: IMessage) => {
+      const event: GameEvent = JSON.parse(message.body);
+      this.eventCallbacks.forEach((cb) => cb(event));
+    });
+  }
+
   unsubscribeFromRoom(roomId: string) {
     const roomSub = this.subscriptions.get(`/topic/room/${roomId}`);
     if (roomSub) {
@@ -219,8 +225,8 @@ class WebSocketService {
     this.send(`/app/room/${roomId}/draw-stroke`, stroke);
   }
 
-  submitDrawing(roomId: string, drawingBase64: string) {
-    this.send(`/app/room/${roomId}/submit-drawing`, { drawingBase64 });
+  submitDrawing(roomId: string) {
+    this.send(`/app/room/${roomId}/submit-drawing`, {});
   }
 
   sendGuess(roomId: string, text: string) {

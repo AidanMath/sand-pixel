@@ -73,6 +73,26 @@ public class Room {
             .orElse(null);
     }
 
+    public Player findPlayerByName(String name) {
+        return players.values().stream()
+            .filter(p -> p.getName().equalsIgnoreCase(name))
+            .findFirst()
+            .orElse(null);
+    }
+
+    public void updatePlayerSession(String oldSessionId, String newSessionId) {
+        Player player = players.remove(oldSessionId);
+        if (player != null) {
+            player.setSessionId(newSessionId);
+            players.put(newSessionId, player);
+
+            // Update hostId if needed
+            if (oldSessionId.equals(hostId)) {
+                hostId = newSessionId;
+            }
+        }
+    }
+
     public List<Player> getPlayerList() {
         return new ArrayList<>(players.values());
     }

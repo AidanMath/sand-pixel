@@ -51,15 +51,16 @@ public class GameEvent {
         return new GameEvent("WORD_OPTIONS", Map.of("words", words));
     }
 
-    public static GameEvent drawingPhase(int drawTime) {
-        return new GameEvent("DRAWING_PHASE", Map.of("drawTime", drawTime));
+    public static GameEvent drawingPhase(int drawTime, int wordLength, String wordHint) {
+        return new GameEvent("DRAWING_PHASE", Map.of(
+            "drawTime", drawTime,
+            "wordLength", wordLength,
+            "wordHint", wordHint
+        ));
     }
 
-    public static GameEvent revealPhase(String drawingBase64, String word) {
-        return new GameEvent("REVEAL_PHASE", Map.of(
-            "drawingBase64", drawingBase64,
-            "word", word
-        ));
+    public static GameEvent revealPhase(String word) {
+        return new GameEvent("REVEAL_PHASE", Map.of("word", word != null ? word : ""));
     }
 
     public static GameEvent correctGuess(Player player, int points, int totalGuessers) {
@@ -98,5 +99,9 @@ public class GameEvent {
 
     public static GameEvent hint(String hint) {
         return new GameEvent("HINT", Map.of("hint", hint));
+    }
+
+    public static GameEvent wordSelected(String word) {
+        return new GameEvent("WORD_SELECTED", Map.of("word", word));
     }
 }

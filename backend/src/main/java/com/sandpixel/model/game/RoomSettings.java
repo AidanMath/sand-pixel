@@ -7,8 +7,7 @@ public class RoomSettings {
     private int maxPlayers = 12;
     private int totalRounds = 3;
     private int drawTime = 80;      // seconds
-    private int revealTime = 30;    // seconds for guessing during reveal
-    private String difficulty = "medium"; // easy, medium, hard
+    private int revealTime = 10;    // seconds for guessing during reveal
 
     public RoomSettings() {}
 

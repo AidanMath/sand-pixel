@@ -63,17 +63,18 @@ public class WordBankService {
         ));
     }
 
-    public String[] getWordOptions(String difficulty, int count) {
-        List<String> words = wordsByDifficulty.getOrDefault(difficulty,
-            wordsByDifficulty.get("medium"));
+    public String[] getWordOptions(int count) {
+        // Combine all words from all difficulties
+        List<String> allWords = new ArrayList<>();
+        wordsByDifficulty.values().forEach(allWords::addAll);
 
-        List<String> available = new ArrayList<>(words);
+        List<String> available = new ArrayList<>(allWords);
         available.removeAll(usedWords);
 
         // Reset if too few words available
         if (available.size() < count) {
             usedWords.clear();
-            available = new ArrayList<>(words);
+            available = new ArrayList<>(allWords);
         }
 
         Collections.shuffle(available, random);
