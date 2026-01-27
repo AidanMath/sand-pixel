@@ -3,7 +3,8 @@ import { DrawingTools } from '../../DrawingTools';
 import { PlayerList } from '../../PlayerList';
 import { ChatBox } from '../../ChatBox';
 import { GameHeader } from '../../GameHeader';
-import type { Room, Player, ChatMessage, DrawStroke } from '../../../types/game.types';
+import { ReactionPicker, ReactionOverlay } from '../../ui';
+import type { Room, Player, ChatMessage, DrawStroke, Reaction } from '../../../types/game.types';
 
 interface DrawingPhaseProps {
   room: Room;
@@ -31,6 +32,8 @@ interface DrawingPhaseProps {
   onSubmitDrawing: () => void;
   onChat: (text: string) => void;
   onDrawingChange?: (dataUrl: string) => void;
+  activeReactions: Reaction[];
+  onReact: (emoji: string) => void;
 }
 
 export function DrawingPhase({
@@ -59,6 +62,8 @@ export function DrawingPhase({
   onSubmitDrawing,
   onChat,
   onDrawingChange,
+  activeReactions,
+  onReact,
 }: DrawingPhaseProps) {
   const hasGuessed = myPlayer && room.gameState.correctGuessers?.includes(myPlayer.id);
 
@@ -99,7 +104,7 @@ export function DrawingPhase({
               </div>
             )}
 
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <DrawingCanvas
                 brushColor={brushColor}
                 brushSize={brushSize}
@@ -111,6 +116,7 @@ export function DrawingPhase({
                 undoTrigger={undoTrigger}
                 clearTrigger={clearTrigger}
               />
+              <ReactionOverlay reactions={activeReactions} />
             </div>
           </div>
 
@@ -119,6 +125,7 @@ export function DrawingPhase({
               players={players}
               hostId={room.hostId}
               currentDrawerId={room.gameState.currentDrawerId}
+              currentDrawerIds={room.gameState.currentDrawerIds || []}
               myPlayerId={myPlayer?.id}
               showScores
             />
@@ -137,6 +144,7 @@ export function DrawingPhase({
                 closeGuessWarning={closeGuess}
               />
             </div>
+            <ReactionPicker onReact={onReact} />
           </div>
         </div>
       </div>

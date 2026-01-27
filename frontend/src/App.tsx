@@ -1,4 +1,4 @@
-import { GamePhaseRouter } from './components/GamePhaseRouter';
+import { GamePhaseRouter } from './components/game/GamePhaseRouter';
 import { ErrorToast } from './components/ErrorToast';
 
 function App() {

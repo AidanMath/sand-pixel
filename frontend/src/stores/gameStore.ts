@@ -8,10 +8,15 @@ import type {
   CorrectGuessPayload,
   RoundEndPayload,
   GameOverPayload,
+  Reaction,
+  DrawingEntry,
+  VotingResult,
+  TelephoneChainEntry,
 } from '../types/game.types';
 import type { ConnectionStatus } from '../types/connection.types';
 import { STORAGE_KEYS } from '../constants/storage.constants';
 import { LIMITS } from '../constants/limits.constants';
+import { DEFAULT_GAME_SETTINGS } from '../constants/game.constants';
 
 interface GameStore {
   // Connection
@@ -36,6 +41,26 @@ interface GameStore {
   // Chat
   chatMessages: ChatMessage[];
 
+  // Reactions
+  activeReactions: Reaction[];
+
+  // Voting
+  votingDrawings: DrawingEntry[];
+  votingTime: number;
+  hasVoted: boolean;
+  votingResults: VotingResult[] | null;
+  votingWinnerId: string | null;
+
+  // Telephone mode
+  telephoneCurrentPlayerId: string | null;
+  telephoneCurrentPlayerName: string | null;
+  telephonePrompt: string | null;
+  telephonePromptType: 'word' | 'guess' | 'drawing' | null;
+  telephoneTime: number;
+  telephoneRemainingPlayers: number;
+  telephoneChain: TelephoneChainEntry[] | null;
+  telephoneOriginalWord: string | null;
+
   // Actions
   setConnectionStatus: (status: ConnectionStatus) => void;
   setError: (error: string | null) => void;
@@ -57,6 +82,15 @@ interface GameStore {
   addChatMessage: (message: ChatMessage) => void;
   setHint: (hint: string) => void;
   setSelectedWord: (word: string) => void;
+  addReaction: (reaction: Reaction) => void;
+  removeReaction: (reactionId: string) => void;
+  setVotingStart: (drawings: DrawingEntry[], votingTime: number) => void;
+  setHasVoted: (hasVoted: boolean) => void;
+  setVotingResults: (results: VotingResult[], winnerId: string) => void;
+  setTelephoneDraw: (playerId: string, playerName: string, drawTime: number, remainingPlayers: number) => void;
+  setTelephoneGuess: (playerId: string, playerName: string, guessTime: number, remainingPlayers: number) => void;
+  setTelephonePrompt: (prompt: string, type: 'word' | 'guess' | 'drawing') => void;
+  setTelephoneReveal: (originalWord: string, chain: TelephoneChainEntry[]) => void;
   reset: () => void;
 
   // Computed helpers
@@ -104,12 +138,26 @@ const initialState = {
   wordOptions: null,
   currentWordHint: '',
   currentWordLength: 0,
-  drawTime: 80,
+  drawTime: DEFAULT_GAME_SETTINGS.DRAW_TIME,
   revealWord: null,
   closeGuess: false,
   roundEndData: null,
   gameOverData: null,
   chatMessages: [],
+  activeReactions: [],
+  votingDrawings: [],
+  votingTime: DEFAULT_GAME_SETTINGS.VOTING_TIME,
+  hasVoted: false,
+  votingResults: null,
+  votingWinnerId: null,
+  telephoneCurrentPlayerId: null,
+  telephoneCurrentPlayerName: null,
+  telephonePrompt: null,
+  telephonePromptType: null,
+  telephoneTime: 60,
+  telephoneRemainingPlayers: 0,
+  telephoneChain: null,
+  telephoneOriginalWord: null,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -191,6 +239,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             ...state.room.gameState,
             currentRound: info.round,
             currentDrawerId: info.drawerId,
+            currentDrawerIds: info.drawerIds || [info.drawerId],
             phase: 'WORD_SELECTION',
           },
         },
@@ -257,7 +306,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ...state.room.gameState.correctGuessers,
         data.playerId,
       ];
-      // Update player score
+      // Update player score and streak
       const players = { ...state.room.players };
       const sessionId = Object.keys(players).find(
         (sid) => players[sid].id === data.playerId
@@ -266,6 +315,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         players[sessionId] = {
           ...players[sessionId],
           score: players[sessionId].score + data.points,
+          currentStreak: data.streak ?? players[sessionId].currentStreak,
         };
       }
       return {
@@ -344,6 +394,105 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setHint: (hint) => set({ currentWordHint: hint }),
 
+  addReaction: (reaction) =>
+    set((state) => ({
+      activeReactions: [...state.activeReactions, reaction],
+    })),
+
+  removeReaction: (reactionId) =>
+    set((state) => ({
+      activeReactions: state.activeReactions.filter((r) => r.id !== reactionId),
+    })),
+
+  setVotingStart: (drawings, votingTime) =>
+    set((state) => {
+      if (!state.room) return state;
+      return {
+        room: {
+          ...state.room,
+          gameState: {
+            ...state.room.gameState,
+            phase: 'VOTING',
+          },
+        },
+        votingDrawings: drawings,
+        votingTime,
+        hasVoted: false,
+        votingResults: null,
+        votingWinnerId: null,
+      };
+    }),
+
+  setHasVoted: (hasVoted) => set({ hasVoted }),
+
+  setVotingResults: (results, winnerId) =>
+    set({
+      votingResults: results,
+      votingWinnerId: winnerId,
+    }),
+
+  setTelephoneDraw: (playerId, playerName, drawTime, remainingPlayers) =>
+    set((state) => {
+      if (!state.room) return state;
+      return {
+        room: {
+          ...state.room,
+          gameState: {
+            ...state.room.gameState,
+            phase: 'TELEPHONE_DRAW',
+          },
+        },
+        telephoneCurrentPlayerId: playerId,
+        telephoneCurrentPlayerName: playerName,
+        telephoneTime: drawTime,
+        telephoneRemainingPlayers: remainingPlayers,
+        telephonePrompt: null,
+        telephonePromptType: null,
+      };
+    }),
+
+  setTelephoneGuess: (playerId, playerName, guessTime, remainingPlayers) =>
+    set((state) => {
+      if (!state.room) return state;
+      return {
+        room: {
+          ...state.room,
+          gameState: {
+            ...state.room.gameState,
+            phase: 'TELEPHONE_GUESS',
+          },
+        },
+        telephoneCurrentPlayerId: playerId,
+        telephoneCurrentPlayerName: playerName,
+        telephoneTime: guessTime,
+        telephoneRemainingPlayers: remainingPlayers,
+        telephonePrompt: null,
+        telephonePromptType: null,
+      };
+    }),
+
+  setTelephonePrompt: (prompt, type) =>
+    set({
+      telephonePrompt: prompt,
+      telephonePromptType: type,
+    }),
+
+  setTelephoneReveal: (originalWord, chain) =>
+    set((state) => {
+      if (!state.room) return state;
+      return {
+        room: {
+          ...state.room,
+          gameState: {
+            ...state.room.gameState,
+            phase: 'TELEPHONE_REVEAL',
+          },
+        },
+        telephoneOriginalWord: originalWord,
+        telephoneChain: chain,
+      };
+    }),
+
   setSelectedWord: (word) =>
     set((state) => {
       if (!state.room) return state;
@@ -377,7 +526,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     if (!state.room || !state.mySessionId) return false;
     const myPlayer = state.room.players[state.mySessionId];
-    return myPlayer?.id === state.room.gameState.currentDrawerId;
+    if (!myPlayer) return false;
+    // Check both single drawer ID (for compatibility) and multiple drawer IDs
+    const drawerIds = state.room.gameState.currentDrawerIds || [];
+    return drawerIds.includes(myPlayer.id) || myPlayer.id === state.room.gameState.currentDrawerId;
   },
 
   getPlayerList: () => {

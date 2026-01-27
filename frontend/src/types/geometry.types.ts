@@ -26,23 +26,3 @@ export interface BoundingBox extends Point2D, Dimensions {}
 
 /** Point with velocity (for physics/input tracking) */
 export interface PointWithVelocity extends Point2D, Velocity2D {}
-
-/** Create a Point2D from x, y values */
-export function point(x: number, y: number): Point2D {
-  return { x, y };
-}
-
-/** Calculate distance between two points */
-export function distance(a: Point2D, b: Point2D): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-/** Linear interpolation between two points */
-export function lerp(a: Point2D, b: Point2D, t: number): Point2D {
-  return {
-    x: a.x + (b.x - a.x) * t,
-    y: a.y + (b.y - a.y) * t,
-  };
-}

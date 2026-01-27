@@ -9,6 +9,15 @@
   --text-primary: #fafafa;
   --text-secondary: #a0a0a0;
   --text-muted: #666;
+  --sand-light: #f5e6d3;
+  --sand: #d4a574;
+  --sand-dark: #8b6914;
+  --sand-warm: #e8c491;
+  --ocean-light: #87ceeb;
+  --ocean: #1e90ff;
+  --ocean-dark: #0047ab;
+  --sand-glow: rgba(212, 165, 116, 0.15);
+  --ocean-glow: rgba(30, 144, 255, 0.15);
 }
 
 * {
@@ -41,6 +50,32 @@ body {
   object-fit: contain;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+}
+
+/* Panel sand utility */
+.panel-sand {
+  background: linear-gradient(145deg, rgba(212, 165, 116, 0.08), rgba(30, 144, 255, 0.04));
+  border: 1px solid rgba(212, 165, 116, 0.12);
+  border-radius: 12px;
+}
+
+/* Sand-themed focus ring */
+.focus-sand:focus {
+  outline: none;
+  border-color: var(--sand);
+  box-shadow: 0 0 0 3px var(--sand-glow);
+}
+
+/* Shimmer effect utility */
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 165, 116, 0.15) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
 }
 
 /* Custom scrollbar */

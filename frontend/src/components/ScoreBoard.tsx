@@ -1,3 +1,14 @@
+import { motion } from 'motion/react';
+import {
+  modalBackdrop,
+  modalContent,
+  springBouncy,
+  springGentle,
+  scoreEntryVariants,
+  buttonHover,
+  buttonTap,
+} from '../utils/animations';
+
 interface ScoreEntry {
   playerId: string;
   playerName: string;
@@ -14,6 +25,7 @@ interface ScoreBoardProps {
   showGuessStatus?: boolean;
   onContinue?: () => void;
   isGameOver?: boolean;
+  timeLeft?: number;
 }
 
 export function ScoreBoard({
@@ -23,6 +35,7 @@ export function ScoreBoard({
   showGuessStatus = false,
   onContinue,
   isGameOver = false,
+  timeLeft,
 }: ScoreBoardProps) {
   const sortedScores = [...scores].sort((a, b) => b.score - a.score);
 
@@ -41,8 +54,19 @@ export function ScoreBoard({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-      <div className="bg-zinc-800 rounded-xl p-8 max-w-lg w-full mx-4 shadow-2xl">
+    <motion.div
+      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+      variants={modalBackdrop}
+      initial="initial"
+      animate="animate"
+    >
+      <motion.div
+        className="bg-zinc-800 rounded-xl p-8 max-w-lg w-full mx-4 shadow-2xl"
+        variants={modalContent}
+        initial="initial"
+        animate="animate"
+        transition={springBouncy}
+      >
         <h2 className="text-2xl font-bold text-white text-center mb-2">
           {title}
         </h2>
@@ -55,15 +79,23 @@ export function ScoreBoard({
 
         <div className="space-y-2 mb-6">
           {sortedScores.map((entry, index) => (
-            <div
+            <motion.div
               key={entry.playerId}
-              className={`flex items-center justify-between p-3 rounded-lg ${
+              variants={scoreEntryVariants}
+              initial="initial"
+              animate="animate"
+              transition={{ ...springGentle, delay: index * 0.1 }}
+              className={`flex items-center justify-between p-3 rounded-lg relative overflow-hidden ${
                 index === 0 && isGameOver
                   ? 'bg-yellow-500/20 border border-yellow-500/30'
                   : 'bg-zinc-700/50'
               }`}
             >
-              <div className="flex items-center gap-3">
+              {/* Winner shimmer */}
+              {index === 0 && isGameOver && (
+                <div className="absolute inset-0 shimmer-bg" />
+              )}
+              <div className="flex items-center gap-3 relative z-10">
                 <span className="text-zinc-400 w-6 text-center">
                   {getMedal(index) || `#${index + 1}`}
                 </span>
@@ -79,26 +111,33 @@ export function ScoreBoard({
                   </span>
                 )}
               </div>
-              <span className="font-mono text-xl text-white">{entry.score}</span>
-            </div>
+              <span className="font-mono text-xl text-white relative z-10">{entry.score}</span>
+            </motion.div>
           ))}
         </div>
 
         {onContinue && (
-          <button
+          <motion.button
             onClick={onContinue}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+            className="w-full py-3 bg-gradient-to-r from-ocean-dark to-ocean text-white font-semibold rounded-lg"
+            whileHover={buttonHover}
+            whileTap={buttonTap}
+            transition={springBouncy}
           >
             {isGameOver ? 'Back to Lobby' : 'Next Round'}
-          </button>
+          </motion.button>
         )}
 
         {!onContinue && (
           <p className="text-center text-zinc-500 text-sm">
-            {isGameOver ? 'Returning to lobby...' : 'Next round starting soon...'}
+            {isGameOver
+              ? 'Returning to lobby...'
+              : timeLeft !== undefined
+                ? `Next round in ${timeLeft}s`
+                : 'Next round starting soon...'}
           </p>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,9 +1,6 @@
-/**
- * Modal overlay component
- * Provides consistent modal styling
- */
-
 import { useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { modalBackdrop, modalContent, springBouncy } from '../../utils/animations';
 
 interface ModalProps {
   children: React.ReactNode;
@@ -18,7 +15,6 @@ export function Modal({
   closeOnOverlayClick = true,
   className = '',
 }: ModalProps) {
-  // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && onClose) {
@@ -37,17 +33,29 @@ export function Modal({
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-      onClick={handleOverlayClick}
-    >
-      <div
-        className={`bg-zinc-800 rounded-lg p-6 max-w-md w-full mx-4 ${className}`}
-        onClick={(e) => e.stopPropagation()}
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+        onClick={handleOverlayClick}
+        variants={modalBackdrop}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ duration: 0.2 }}
       >
-        {children}
-      </div>
-    </div>
+        <motion.div
+          className={`bg-zinc-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl ${className}`}
+          onClick={(e) => e.stopPropagation()}
+          variants={modalContent}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={springBouncy}
+        >
+          {children}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 

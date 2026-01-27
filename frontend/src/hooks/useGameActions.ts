@@ -15,6 +15,9 @@ import { useLobbyActions } from './actions/useLobbyActions';
 import { useDrawingActions } from './actions/useDrawingActions';
 import { useWordActions } from './actions/useWordActions';
 import { useChatActions } from './actions/useChatActions';
+import { useReactionActions } from './actions/useReactionActions';
+import { useVotingActions } from './actions/useVotingActions';
+import { useTelephoneActions } from './actions/useTelephoneActions';
 
 export function useGameActions() {
   const roomActions = useRoomActions();
@@ -22,6 +25,9 @@ export function useGameActions() {
   const drawingActions = useDrawingActions();
   const wordActions = useWordActions();
   const chatActions = useChatActions();
+  const reactionActions = useReactionActions();
+  const votingActions = useVotingActions();
+  const telephoneActions = useTelephoneActions();
 
   return {
     ...roomActions,
@@ -29,6 +35,9 @@ export function useGameActions() {
     ...drawingActions,
     ...wordActions,
     ...chatActions,
+    ...reactionActions,
+    ...votingActions,
+    ...telephoneActions,
   };
 }
 
@@ -38,3 +47,6 @@ export { useLobbyActions } from './actions/useLobbyActions';
 export { useDrawingActions } from './actions/useDrawingActions';
 export { useWordActions } from './actions/useWordActions';
 export { useChatActions } from './actions/useChatActions';
+export { useReactionActions } from './actions/useReactionActions';
+export { useVotingActions } from './actions/useVotingActions';
+export { useTelephoneActions } from './actions/useTelephoneActions';

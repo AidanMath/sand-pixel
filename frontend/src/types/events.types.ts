@@ -5,7 +5,6 @@
 
 import type {
   Room,
-  Player,
   ChatMessage,
   PlayerJoinedPayload,
   PlayerLeftPayload,

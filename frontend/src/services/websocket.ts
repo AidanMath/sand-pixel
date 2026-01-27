@@ -236,6 +236,22 @@ class WebSocketService {
   sendChat(roomId: string, text: string) {
     this.send(`/app/room/${roomId}/chat`, { text });
   }
+
+  sendReaction(roomId: string, emoji: string) {
+    this.send(`/app/room/${roomId}/react`, { emoji });
+  }
+
+  submitVote(roomId: string, drawingDrawerId: string) {
+    this.send(`/app/room/${roomId}/vote`, { drawingDrawerId });
+  }
+
+  submitTelephoneDrawing(roomId: string, drawingBase64: string) {
+    this.send(`/app/room/${roomId}/telephone-draw`, { drawingBase64 });
+  }
+
+  submitTelephoneGuess(roomId: string, text: string) {
+    this.send(`/app/room/${roomId}/telephone-guess`, { text });
+  }
 }
 
 // Singleton instance

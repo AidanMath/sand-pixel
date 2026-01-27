@@ -1,3 +1,6 @@
+import { motion } from 'motion/react';
+import { springBouncy, buttonHover, buttonTap, staggerContainer, staggerItem } from '../../utils/animations';
+
 interface JoinRoomViewProps {
   playerName: string;
   roomCode: string;
@@ -17,26 +20,46 @@ export function JoinRoomView({
   onJoinRoom,
   onBack,
 }: JoinRoomViewProps) {
+  const canJoin = playerName.trim() && roomCode.length === 6;
+
   return (
     <div className="min-h-screen bg-zinc-900 text-white p-8">
       <div className="max-w-md mx-auto">
-        <button
+        <motion.button
           onClick={onBack}
           className="mb-8 text-zinc-400 hover:text-white transition"
+          whileHover={{ x: -4 }}
+          transition={springBouncy}
         >
           ← Back
-        </button>
+        </motion.button>
 
-        <h1 className="text-3xl font-bold mb-8">Join Room</h1>
+        <motion.h1
+          className="text-3xl font-bold mb-8 bg-sand-gradient bg-clip-text text-transparent"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          Join Room
+        </motion.h1>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded text-red-300">
+          <motion.div
+            className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
-        <div className="space-y-6">
-          <div>
+        <motion.div
+          className="space-y-6"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.div variants={staggerItem} transition={springBouncy}>
             <label className="block text-sm text-zinc-400 mb-2">
               Your Name
             </label>
@@ -46,11 +69,11 @@ export function JoinRoomView({
               onChange={(e) => onPlayerNameChange(e.target.value)}
               placeholder="Enter your name"
               maxLength={20}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg focus-sand transition-shadow"
             />
-          </div>
+          </motion.div>
 
-          <div>
+          <motion.div variants={staggerItem} transition={springBouncy}>
             <label className="block text-sm text-zinc-400 mb-2">
               Room Code
             </label>
@@ -60,18 +83,22 @@ export function JoinRoomView({
               onChange={(e) => onRoomCodeChange(e.target.value.toUpperCase())}
               placeholder="Enter 6-character code"
               maxLength={6}
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded focus:outline-none focus:border-blue-500 uppercase tracking-widest text-center text-xl"
+              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg focus-sand uppercase tracking-widest text-center text-xl transition-shadow"
             />
-          </div>
+          </motion.div>
 
-          <button
+          <motion.button
             onClick={onJoinRoom}
-            disabled={!playerName.trim() || roomCode.length !== 6}
-            className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-zinc-700 disabled:text-zinc-500 rounded font-semibold transition"
+            disabled={!canJoin}
+            className="w-full py-4 bg-gradient-to-r from-sand-dark to-sand disabled:bg-zinc-700 disabled:text-zinc-500 disabled:from-zinc-700 disabled:to-zinc-700 rounded-lg font-semibold shadow-lg shadow-sand/10"
+            variants={staggerItem}
+            whileHover={canJoin ? buttonHover : undefined}
+            whileTap={canJoin ? buttonTap : undefined}
+            transition={springBouncy}
           >
             Join Room
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </div>
     </div>
   );

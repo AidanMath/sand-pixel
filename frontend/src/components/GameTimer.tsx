@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { springBouncy } from '../utils/animations';
+import { TIMER } from '../constants';
 
 interface GameTimerProps {
   duration: number;
@@ -35,28 +38,40 @@ export function GameTimer({
   }, [duration, startTime, onTimeUp]);
 
   const percentage = (timeLeft / duration) * 100;
-  const isLow = timeLeft <= 10;
+  const isLow = timeLeft <= TIMER.LOW_TIME_THRESHOLD;
+
+  // Gradient color: ocean -> sand-warm -> red as time depletes
+  const getBarGradient = () => {
+    if (percentage > TIMER.BAR_WARNING_PERCENT) {
+      return 'bg-gradient-to-r from-ocean-dark to-ocean';
+    }
+    if (percentage > TIMER.BAR_DANGER_PERCENT) {
+      return 'bg-gradient-to-r from-sand-dark to-sand-warm';
+    }
+    return 'bg-gradient-to-r from-red-700 to-red-500';
+  };
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       {/* Timer bar */}
       <div className="flex-1 h-3 bg-zinc-700 rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all duration-1000 ${
-            isLow ? 'bg-red-500' : 'bg-blue-500'
-          }`}
-          style={{ width: `${percentage}%` }}
+        <motion.div
+          className={`h-full rounded-full ${getBarGradient()}`}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
         />
       </div>
 
       {/* Time display */}
-      <span
+      <motion.span
         className={`font-mono text-lg min-w-[3ch] text-right ${
-          isLow ? 'text-red-400 animate-pulse' : 'text-white'
+          isLow ? 'text-red-400' : 'text-white'
         }`}
+        animate={isLow ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+        transition={isLow ? { duration: 0.5, repeat: Infinity } : springBouncy}
       >
         {timeLeft}
-      </span>
+      </motion.span>
     </div>
   );
 }

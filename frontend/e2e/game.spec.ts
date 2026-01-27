@@ -157,9 +157,9 @@ test.describe('Sand Pixel Multiplayer Game', () => {
     // Host starts game
     await player1.click('button:has-text("Start Game")');
 
-    // Wait for countdown on both players
-    await expect(player1.locator('text=Get Ready!')).toBeVisible({ timeout: 5000 });
-    await expect(player2.locator('text=Get Ready!')).toBeVisible({ timeout: 5000 });
+    // Wait for countdown on both players (shows 3, 2, 1, then Draw!)
+    await expect(player1.locator('.text-9xl, .text-7xl')).toBeVisible({ timeout: 5000 });
+    await expect(player2.locator('.text-9xl, .text-7xl')).toBeVisible({ timeout: 5000 });
 
     // Wait for word selection phase - race to see which player gets word options first
     // Also handle case where game auto-selected a word and is already in drawing phase
@@ -212,8 +212,8 @@ test.describe('Sand Pixel Multiplayer Game', () => {
     await clickReady(player2);
     await player1.click('button:has-text("Start Game")');
 
-    // Wait for countdown
-    await expect(player1.locator('text=Get Ready!')).toBeVisible({ timeout: 5000 });
+    // Wait for countdown (shows 3, 2, 1, then Draw!)
+    await expect(player1.locator('.text-9xl, .text-7xl')).toBeVisible({ timeout: 5000 });
 
     // Wait for word selection and select a word
     const { drawer, guesser } = await selectWord(player1, player2);
@@ -253,8 +253,8 @@ test.describe('Sand Pixel Multiplayer Game', () => {
     await clickReady(player2);
     await player1.click('button:has-text("Start Game")');
 
-    // Wait for countdown
-    await expect(player1.locator('text=Get Ready!')).toBeVisible({ timeout: 5000 });
+    // Wait for countdown (shows 3, 2, 1, then Draw!)
+    await expect(player1.locator('.text-9xl, .text-7xl')).toBeVisible({ timeout: 5000 });
 
     // Wait for word selection and select a word
     const { drawer } = await selectWord(player1, player2);

@@ -1,3 +1,5 @@
+import { DEFAULT_GAME_SETTINGS } from '../constants';
+
 // Game phases
 export type GamePhase =
   | 'LOBBY'
@@ -6,7 +8,11 @@ export type GamePhase =
   | 'DRAWING'
   | 'REVEAL'
   | 'RESULTS'
-  | 'GAME_OVER';
+  | 'GAME_OVER'
+  | 'VOTING'
+  | 'TELEPHONE_DRAW'
+  | 'TELEPHONE_GUESS'
+  | 'TELEPHONE_REVEAL';
 
 // Player
 export interface Player {
@@ -16,7 +22,12 @@ export interface Player {
   score: number;
   ready: boolean;
   connected: boolean;
+  currentStreak: number;
+  maxStreak: number;
 }
+
+// Game modes
+export type GameMode = 'CLASSIC' | 'COLLABORATIVE' | 'TELEPHONE';
 
 // Room settings
 export interface RoomSettings {
@@ -24,6 +35,8 @@ export interface RoomSettings {
   totalRounds: number;
   drawTime: number;
   revealTime: number;
+  gameMode: GameMode;
+  collaborativeDrawerCount: number;
 }
 
 // Game state
@@ -32,6 +45,7 @@ export interface GameState {
   currentRound: number;
   totalRounds: number;
   currentDrawerId: string | null;
+  currentDrawerIds: string[];
   currentWord: string | null;
   wordOptions: string[] | null;
   drawingBase64: string | null;
@@ -87,7 +101,28 @@ export type GameEventType =
   | 'GAME_OVER'
   | 'CHAT'
   | 'HINT'
-  | 'ERROR';
+  | 'ERROR'
+  | 'REACTION'
+  | 'VOTING_START'
+  | 'VOTE_RECEIVED'
+  | 'VOTING_RESULTS'
+  | 'TELEPHONE_DRAW'
+  | 'TELEPHONE_GUESS'
+  | 'TELEPHONE_PROMPT'
+  | 'TELEPHONE_REVEAL';
+
+// Allowed emojis for reactions
+export const ALLOWED_EMOJIS = ['👍', '👏', '😂', '🔥', '❤️', '😮', '🤔', '😭', '💀', '🎨'] as const;
+export type AllowedEmoji = typeof ALLOWED_EMOJIS[number];
+
+// Reaction
+export interface Reaction {
+  id: string;
+  playerId: string;
+  playerName: string;
+  emoji: string;
+  timestamp: number;
+}
 
 export interface GameEvent<T = unknown> {
   type: GameEventType;
@@ -112,6 +147,7 @@ export interface CountdownPayload {
 export interface RoundStartPayload {
   round: number;
   drawerId: string;
+  drawerIds: string[];
   wordLength: number;
   wordHint: string;
 }
@@ -139,6 +175,8 @@ export interface CorrectGuessPayload {
   playerName: string;
   points: number;
   totalGuessers: number;
+  streak: number;
+  multiplier: number;
 }
 
 export interface CloseGuessPayload {
@@ -153,6 +191,7 @@ export interface RoundEndPayload {
     score: number;
     isDrawer: boolean;
     guessedCorrectly: boolean;
+    currentStreak: number;
   }>;
 }
 
@@ -162,6 +201,7 @@ export interface GameOverPayload {
     playerName: string;
     score: number;
     rank: number;
+    maxStreak: number;
   }>;
 }
 
@@ -173,6 +213,79 @@ export interface ErrorPayload {
   message: string;
 }
 
+export interface ReactionPayload {
+  playerId: string;
+  playerName: string;
+  emoji: string;
+  timestamp: number;
+}
+
+// Voting types
+export interface DrawingEntry {
+  drawerId: string;
+  drawerName: string;
+  word: string;
+  drawingBase64: string;
+}
+
+export interface VotingStartPayload {
+  drawings: DrawingEntry[];
+  votingTime: number;
+}
+
+export interface VoteReceivedPayload {
+  voterId: string;
+  voterName: string;
+  totalVotes: number;
+  totalPlayers: number;
+}
+
+export interface VotingResult {
+  drawerId: string;
+  drawerName: string;
+  word: string;
+  votes: number;
+  isWinner: boolean;
+}
+
+export interface VotingResultsPayload {
+  results: VotingResult[];
+  winnerId: string;
+  bonusPoints: number;
+}
+
+// Telephone mode types
+export interface TelephoneDrawPayload {
+  playerId: string;
+  playerName: string;
+  drawTime: number;
+  remainingPlayers: number;
+}
+
+export interface TelephoneGuessPayload {
+  playerId: string;
+  playerName: string;
+  guessTime: number;
+  remainingPlayers: number;
+}
+
+export interface TelephonePromptPayload {
+  prompt: string;
+  type: 'word' | 'guess' | 'drawing';
+}
+
+export interface TelephoneChainEntry {
+  type: 'word' | 'draw' | 'guess';
+  content: string;
+  playerId: string;
+  playerName: string;
+}
+
+export interface TelephoneRevealPayload {
+  originalWord: string;
+  chain: TelephoneChainEntry[];
+}
+
 // Room response
 export interface RoomResponse {
   success: boolean;
@@ -181,10 +294,12 @@ export interface RoomResponse {
   sessionId?: string;
 }
 
-// Default settings
+// Default settings - uses constants for single source of truth
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
-  maxPlayers: 8,
-  totalRounds: 3,
-  drawTime: 80,
-  revealTime: 30,
+  maxPlayers: DEFAULT_GAME_SETTINGS.MAX_PLAYERS,
+  totalRounds: DEFAULT_GAME_SETTINGS.ROUNDS,
+  drawTime: DEFAULT_GAME_SETTINGS.DRAW_TIME,
+  revealTime: DEFAULT_GAME_SETTINGS.REVEAL_TIME,
+  gameMode: 'CLASSIC',
+  collaborativeDrawerCount: 2,
 };

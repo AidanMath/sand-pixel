@@ -1,7 +1,5 @@
-/**
- * Styled button component
- * Provides consistent button styling with variants
- */
+import { motion } from 'motion/react';
+import { springBouncy, buttonHover, buttonTap } from '../../utils/animations';
 
 type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger';
 
@@ -16,10 +14,10 @@ interface ButtonProps {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-blue-600 hover:bg-blue-700',
+  primary: 'bg-gradient-to-r from-ocean-dark to-ocean shadow-lg shadow-ocean/10',
   secondary: 'bg-zinc-700 hover:bg-zinc-600',
-  success: 'bg-green-600 hover:bg-green-700',
-  danger: 'bg-red-600 hover:bg-red-700',
+  success: 'bg-gradient-to-r from-green-700 to-green-500 shadow-lg shadow-green-500/10',
+  danger: 'bg-gradient-to-r from-red-700 to-red-500 shadow-lg shadow-red-500/10',
 };
 
 export function Button({
@@ -32,18 +30,21 @@ export function Button({
   fullWidth = false,
 }: ButtonProps) {
   return (
-    <button
+    <motion.button
       type={type}
       onClick={onClick}
       disabled={disabled}
       className={`
-        py-3 px-6 rounded font-semibold transition
+        py-3 px-6 rounded-lg font-semibold transition-colors
         ${fullWidth ? 'w-full' : ''}
         ${disabled ? 'bg-zinc-700 text-zinc-500 cursor-not-allowed' : variantStyles[variant]}
         ${className}
       `}
+      whileHover={disabled ? undefined : buttonHover}
+      whileTap={disabled ? undefined : buttonTap}
+      transition={springBouncy}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }

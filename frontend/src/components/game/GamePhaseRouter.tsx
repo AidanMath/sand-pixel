@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useGameStore } from '../../stores/gameStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useCloseGuessEffect } from '../../hooks/useCloseGuessEffect';
-import { GameLobby } from '../GameLobby';
+import { GameLobby } from '../lobby/GameLobby';
 import {
   CountdownPhase,
   WordSelectionPhase,
@@ -10,7 +11,12 @@ import {
   RevealPhase,
   ResultsPhase,
   GameOverPhase,
+  VotingPhase,
+  TelephoneDrawPhase,
+  TelephoneGuessPhase,
+  TelephoneRevealPhase,
 } from './phases';
+import { pageTransition, pageTransitionProps } from '../../utils/animations';
 import type { DrawStroke } from '../../types/game.types';
 
 export function GamePhaseRouter() {
@@ -25,6 +31,19 @@ export function GamePhaseRouter() {
     roundEndData,
     gameOverData,
     chatMessages,
+    activeReactions,
+    votingDrawings,
+    votingTime,
+    hasVoted,
+    votingResults,
+    telephoneCurrentPlayerId,
+    telephoneCurrentPlayerName,
+    telephonePrompt,
+    telephonePromptType,
+    telephoneTime,
+    telephoneRemainingPlayers,
+    telephoneChain,
+    telephoneOriginalWord,
     getPlayerList,
     getMyPlayer,
     isDrawer,
@@ -37,6 +56,10 @@ export function GamePhaseRouter() {
     submitDrawing,
     sendGuess,
     sendChat,
+    sendReaction,
+    submitVote,
+    submitTelephoneDrawing,
+    submitTelephoneGuess,
     setOnDrawStroke,
   } = useWebSocket();
 
@@ -115,88 +138,193 @@ export function GamePhaseRouter() {
     setCapturedDrawing(dataUrl);
   }, []);
 
-  // Route to appropriate phase component
-  if (phase === 'LOBBY' || !room) {
-    return <GameLobby />;
-  }
+  const handleReaction = useCallback(
+    (emoji: string) => {
+      if (room) sendReaction(room.id, emoji);
+    },
+    [room, sendReaction]
+  );
 
-  if (phase === 'COUNTDOWN') {
-    return <CountdownPhase />;
-  }
+  const handleVote = useCallback(
+    (drawerId: string) => {
+      if (room) submitVote(room.id, drawerId);
+    },
+    [room, submitVote]
+  );
 
-  if (phase === 'WORD_SELECTION') {
-    const drawer = players.find((p) => p.id === room.gameState.currentDrawerId);
+  const handleTelephoneDrawingSubmit = useCallback(
+    (drawingBase64: string) => {
+      if (room) submitTelephoneDrawing(room.id, drawingBase64);
+    },
+    [room, submitTelephoneDrawing]
+  );
+
+  const handleTelephoneGuessSubmit = useCallback(
+    (guess: string) => {
+      if (room) submitTelephoneGuess(room.id, guess);
+    },
+    [room, submitTelephoneGuess]
+  );
+
+  // Determine content based on phase
+  const renderPhase = () => {
+    if (phase === 'LOBBY' || !room) {
+      return <GameLobby key="lobby" />;
+    }
+
+    if (phase === 'COUNTDOWN') {
+      return <CountdownPhase key="countdown" />;
+    }
+
+    if (phase === 'WORD_SELECTION') {
+      const drawer = players.find((p) => p.id === room.gameState.currentDrawerId);
+      return (
+        <WordSelectionPhase
+          key="word-selection"
+          isDrawer={amDrawer}
+          wordOptions={wordOptions}
+          drawer={drawer}
+          onWordSelect={handleWordSelect}
+        />
+      );
+    }
+
+    if (phase === 'DRAWING') {
+      const drawer = players.find((p) => p.id === room.gameState.currentDrawerId);
+      return (
+        <DrawingPhase
+          key="drawing"
+          room={room}
+          players={players}
+          myPlayer={myPlayer}
+          isDrawer={amDrawer}
+          drawer={drawer}
+          currentWordHint={currentWordHint}
+          currentWordLength={currentWordLength}
+          drawTime={drawTime}
+          chatMessages={chatMessages}
+          closeGuess={closeGuess}
+          brushColor={brushColor}
+          brushSize={brushSize}
+          tool={tool}
+          remoteStrokes={remoteStrokes}
+          undoTrigger={undoTrigger}
+          clearTrigger={clearTrigger}
+          onColorChange={setBrushColor}
+          onSizeChange={setBrushSize}
+          onToolChange={setTool}
+          onUndo={handleUndo}
+          onClear={handleClear}
+          onStroke={handleDrawStroke}
+          onSubmitDrawing={handleSubmitDrawing}
+          onChat={handleChat}
+          onDrawingChange={handleDrawingChange}
+          activeReactions={activeReactions}
+          onReact={handleReaction}
+        />
+      );
+    }
+
+    if (phase === 'REVEAL') {
+      return (
+        <RevealPhase
+          key="reveal"
+          room={room}
+          players={players}
+          myPlayer={myPlayer}
+          isDrawer={amDrawer}
+          revealWord={revealWord}
+          chatMessages={chatMessages}
+          closeGuess={closeGuess}
+          onChat={handleChat}
+          capturedDrawing={capturedDrawing}
+          activeReactions={activeReactions}
+          onReact={handleReaction}
+        />
+      );
+    }
+
+    if (phase === 'RESULTS' && roundEndData) {
+      return <ResultsPhase key="results" roundEndData={roundEndData} />;
+    }
+
+    if (phase === 'GAME_OVER' && gameOverData) {
+      return <GameOverPhase key="game-over" gameOverData={gameOverData} />;
+    }
+
+    if (phase === 'VOTING') {
+      return (
+        <VotingPhase
+          key="voting"
+          drawings={votingDrawings}
+          votingTime={votingTime}
+          hasVoted={hasVoted}
+          votingResults={votingResults}
+          myPlayerId={myPlayer?.id || null}
+          onVote={handleVote}
+        />
+      );
+    }
+
+    if (phase === 'TELEPHONE_DRAW') {
+      const isMyTurn = myPlayer?.id === telephoneCurrentPlayerId;
+      return (
+        <TelephoneDrawPhase
+          key="telephone-draw"
+          prompt={telephonePrompt || ''}
+          promptType={telephonePromptType === 'word' ? 'word' : 'guess'}
+          drawTime={telephoneTime}
+          currentPlayerName={telephoneCurrentPlayerName || ''}
+          isMyTurn={isMyTurn}
+          remainingPlayers={telephoneRemainingPlayers}
+          onSubmitDrawing={handleTelephoneDrawingSubmit}
+        />
+      );
+    }
+
+    if (phase === 'TELEPHONE_GUESS') {
+      const isMyTurn = myPlayer?.id === telephoneCurrentPlayerId;
+      return (
+        <TelephoneGuessPhase
+          key="telephone-guess"
+          prompt={telephonePrompt || ''}
+          guessTime={telephoneTime}
+          currentPlayerName={telephoneCurrentPlayerName || ''}
+          isMyTurn={isMyTurn}
+          remainingPlayers={telephoneRemainingPlayers}
+          onSubmitGuess={handleTelephoneGuessSubmit}
+        />
+      );
+    }
+
+    if (phase === 'TELEPHONE_REVEAL' && telephoneChain) {
+      return (
+        <TelephoneRevealPhase
+          key="telephone-reveal"
+          originalWord={telephoneOriginalWord || ''}
+          chain={telephoneChain}
+        />
+      );
+    }
+
+    // Fallback
     return (
-      <WordSelectionPhase
-        isDrawer={amDrawer}
-        wordOptions={wordOptions}
-        drawer={drawer}
-        onWordSelect={handleWordSelect}
-      />
+      <div key="loading" className="min-h-screen bg-zinc-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
     );
-  }
+  };
 
-  if (phase === 'DRAWING') {
-    const drawer = players.find((p) => p.id === room.gameState.currentDrawerId);
-    return (
-      <DrawingPhase
-        room={room}
-        players={players}
-        myPlayer={myPlayer}
-        isDrawer={amDrawer}
-        drawer={drawer}
-        currentWordHint={currentWordHint}
-        currentWordLength={currentWordLength}
-        drawTime={drawTime}
-        chatMessages={chatMessages}
-        closeGuess={closeGuess}
-        brushColor={brushColor}
-        brushSize={brushSize}
-        tool={tool}
-        remoteStrokes={remoteStrokes}
-        undoTrigger={undoTrigger}
-        clearTrigger={clearTrigger}
-        onColorChange={setBrushColor}
-        onSizeChange={setBrushSize}
-        onToolChange={setTool}
-        onUndo={handleUndo}
-        onClear={handleClear}
-        onStroke={handleDrawStroke}
-        onSubmitDrawing={handleSubmitDrawing}
-        onChat={handleChat}
-        onDrawingChange={handleDrawingChange}
-      />
-    );
-  }
-
-  if (phase === 'REVEAL') {
-    return (
-      <RevealPhase
-        room={room}
-        players={players}
-        myPlayer={myPlayer}
-        isDrawer={amDrawer}
-        revealWord={revealWord}
-        chatMessages={chatMessages}
-        closeGuess={closeGuess}
-        onChat={handleChat}
-        capturedDrawing={capturedDrawing}
-      />
-    );
-  }
-
-  if (phase === 'RESULTS' && roundEndData) {
-    return <ResultsPhase roundEndData={roundEndData} />;
-  }
-
-  if (phase === 'GAME_OVER' && gameOverData) {
-    return <GameOverPhase gameOverData={gameOverData} />;
-  }
-
-  // Fallback
   return (
-    <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
-      <div className="text-white">Loading...</div>
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={phase}
+        variants={pageTransition}
+        {...pageTransitionProps}
+        className="min-h-screen"
+      >
+        {renderPhase()}
+      </motion.div>
+    </AnimatePresence>
   );
 }

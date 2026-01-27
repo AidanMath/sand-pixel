@@ -20,6 +20,7 @@
     "@stomp/stompjs": "^7.2.1",
     "@tailwindcss/postcss": "^4.1.18",
     "gl-matrix": "^3.4.4",
+    "motion": "^12.29.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "sockjs-client": "^1.6.1",

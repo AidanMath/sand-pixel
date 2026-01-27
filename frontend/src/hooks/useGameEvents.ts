@@ -19,6 +19,13 @@ import type {
   ErrorPayload,
   ChatMessage,
   Room,
+  ReactionPayload,
+  VotingStartPayload,
+  VotingResultsPayload,
+  TelephoneDrawPayload,
+  TelephoneGuessPayload,
+  TelephonePromptPayload,
+  TelephoneRevealPayload,
 } from '../types/game.types';
 import { wsService } from '../services/websocket';
 
@@ -41,6 +48,14 @@ export function useGameEvents() {
     setHint,
     setError,
     clearError,
+    addReaction,
+    removeReaction,
+    setVotingStart,
+    setVotingResults,
+    setTelephoneDraw,
+    setTelephoneGuess,
+    setTelephonePrompt,
+    setTelephoneReveal,
   } = useGameStore();
 
   const handleGameEvent = useCallback(
@@ -104,10 +119,15 @@ export function useGameEvents() {
         case 'CORRECT_GUESS': {
           const payload = event.payload as CorrectGuessPayload;
           addCorrectGuesser(payload);
+          // Build message with streak info if applicable
+          let message = `${payload.playerName} guessed correctly! (+${payload.points})`;
+          if (payload.multiplier > 1) {
+            message += ` 🔥 ${payload.multiplier}x streak!`;
+          }
           addChatMessage({
             playerId: 'system',
             playerName: 'System',
-            text: `${payload.playerName} guessed correctly! (+${payload.points})`,
+            text: message,
             timestamp: Date.now(),
             system: true,
           });
@@ -149,6 +169,64 @@ export function useGameEvents() {
           setError(message);
           break;
         }
+
+        case 'REACTION': {
+          const payload = event.payload as ReactionPayload;
+          const reactionId = `${payload.playerId}-${payload.timestamp}`;
+          addReaction({
+            id: reactionId,
+            playerId: payload.playerId,
+            playerName: payload.playerName,
+            emoji: payload.emoji,
+            timestamp: payload.timestamp,
+          });
+          // Auto-remove after 2 seconds
+          setTimeout(() => {
+            removeReaction(reactionId);
+          }, 2000);
+          break;
+        }
+
+        case 'VOTING_START': {
+          const payload = event.payload as VotingStartPayload;
+          setVotingStart(payload.drawings, payload.votingTime);
+          break;
+        }
+
+        case 'VOTE_RECEIVED': {
+          // Could show who voted, but we'll keep it simple for now
+          break;
+        }
+
+        case 'VOTING_RESULTS': {
+          const payload = event.payload as VotingResultsPayload;
+          setVotingResults(payload.results, payload.winnerId);
+          break;
+        }
+
+        case 'TELEPHONE_DRAW': {
+          const payload = event.payload as TelephoneDrawPayload;
+          setTelephoneDraw(payload.playerId, payload.playerName, payload.drawTime, payload.remainingPlayers);
+          break;
+        }
+
+        case 'TELEPHONE_GUESS': {
+          const payload = event.payload as TelephoneGuessPayload;
+          setTelephoneGuess(payload.playerId, payload.playerName, payload.guessTime, payload.remainingPlayers);
+          break;
+        }
+
+        case 'TELEPHONE_PROMPT': {
+          const payload = event.payload as TelephonePromptPayload;
+          setTelephonePrompt(payload.prompt, payload.type);
+          break;
+        }
+
+        case 'TELEPHONE_REVEAL': {
+          const payload = event.payload as TelephoneRevealPayload;
+          setTelephoneReveal(payload.originalWord, payload.chain);
+          break;
+        }
       }
     },
     [
@@ -167,6 +245,14 @@ export function useGameEvents() {
       addChatMessage,
       setHint,
       setError,
+      addReaction,
+      removeReaction,
+      setVotingStart,
+      setVotingResults,
+      setTelephoneDraw,
+      setTelephoneGuess,
+      setTelephonePrompt,
+      setTelephoneReveal,
     ]
   );
 

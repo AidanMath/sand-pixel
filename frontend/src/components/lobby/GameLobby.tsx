@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useGameStore } from '../../stores/gameStore';
 import { LobbyHome } from './LobbyHome';
 import { CreateRoomView } from './CreateRoomView';
 import { JoinRoomView } from './JoinRoomView';
 import { RoomView } from './RoomView';
+import { slideLeft, slideRight } from '../../utils/animations';
 import type { RoomSettings } from '../../types/game.types';
 import { DEFAULT_ROOM_SETTINGS } from '../../types/game.types';
 
@@ -12,11 +14,16 @@ interface GameLobbyProps {
   onGameStart?: () => void;
 }
 
+type ViewType = 'home' | 'create' | 'join' | 'room';
+
+const viewOrder: ViewType[] = ['home', 'create', 'join', 'room'];
+
 export function GameLobby({ onGameStart }: GameLobbyProps) {
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
-  const [view, setView] = useState<'home' | 'create' | 'join' | 'room'>('home');
+  const [view, setView] = useState<ViewType>('home');
   const [settings, setSettings] = useState<RoomSettings>(DEFAULT_ROOM_SETTINGS);
+  const prevViewRef = useRef<ViewType>('home');
 
   const {
     connect,
@@ -40,6 +47,15 @@ export function GameLobby({ onGameStart }: GameLobbyProps) {
     clearPersistedSession,
   } = useGameStore();
 
+  // Track navigation direction
+  const isForward = viewOrder.indexOf(view) >= viewOrder.indexOf(prevViewRef.current);
+  const slideVariants = isForward ? slideLeft : slideRight;
+
+  const navigateTo = (newView: ViewType) => {
+    prevViewRef.current = view;
+    setView(newView);
+  };
+
   // Connect on mount and try to rejoin if we have a persisted session
   useEffect(() => {
     const initConnection = async () => {
@@ -58,7 +74,7 @@ export function GameLobby({ onGameStart }: GameLobbyProps) {
   // Switch to room view when room is set and persist session
   useEffect(() => {
     if (room && playerName) {
-      setView('room');
+      navigateTo('room');
       persistSession(room.id, playerName);
     }
   }, [room, playerName, persistSession]);
@@ -84,7 +100,7 @@ export function GameLobby({ onGameStart }: GameLobbyProps) {
     if (room) {
       leaveRoom(room.id);
       clearPersistedSession();
-      setView('home');
+      navigateTo('home');
     }
   };
 
@@ -124,55 +140,83 @@ export function GameLobby({ onGameStart }: GameLobbyProps) {
     );
   }
 
-  if (view === 'room' && room) {
-    return (
-      <RoomView
-        room={room}
-        players={players}
-        myPlayer={myPlayer}
-        isHost={isHost()}
-        canStart={canStart}
-        error={error}
-        onLeaveRoom={handleLeaveRoom}
-        onToggleReady={handleToggleReady}
-        onStartGame={handleStartGame}
-        onClearError={clearError}
-      />
-    );
-  }
-
-  if (view === 'create') {
-    return (
-      <CreateRoomView
-        playerName={playerName}
-        settings={settings}
-        error={error}
-        onPlayerNameChange={setPlayerName}
-        onSettingsChange={setSettings}
-        onCreateRoom={handleCreateRoom}
-        onBack={() => setView('home')}
-      />
-    );
-  }
-
-  if (view === 'join') {
-    return (
-      <JoinRoomView
-        playerName={playerName}
-        roomCode={roomCode}
-        error={error}
-        onPlayerNameChange={setPlayerName}
-        onRoomCodeChange={setRoomCode}
-        onJoinRoom={handleJoinRoom}
-        onBack={() => setView('home')}
-      />
-    );
-  }
-
   return (
-    <LobbyHome
-      onCreateRoom={() => setView('create')}
-      onJoinRoom={() => setView('join')}
-    />
+    <AnimatePresence mode="wait">
+      {view === 'room' && room ? (
+        <motion.div
+          key="room"
+          variants={slideVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+        >
+          <RoomView
+            room={room}
+            players={players}
+            myPlayer={myPlayer}
+            isHost={isHost()}
+            canStart={canStart}
+            error={error}
+            onLeaveRoom={handleLeaveRoom}
+            onToggleReady={handleToggleReady}
+            onStartGame={handleStartGame}
+            onClearError={clearError}
+          />
+        </motion.div>
+      ) : view === 'create' ? (
+        <motion.div
+          key="create"
+          variants={slideVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+        >
+          <CreateRoomView
+            playerName={playerName}
+            settings={settings}
+            error={error}
+            onPlayerNameChange={setPlayerName}
+            onSettingsChange={setSettings}
+            onCreateRoom={handleCreateRoom}
+            onBack={() => navigateTo('home')}
+          />
+        </motion.div>
+      ) : view === 'join' ? (
+        <motion.div
+          key="join"
+          variants={slideVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+        >
+          <JoinRoomView
+            playerName={playerName}
+            roomCode={roomCode}
+            error={error}
+            onPlayerNameChange={setPlayerName}
+            onRoomCodeChange={setRoomCode}
+            onJoinRoom={handleJoinRoom}
+            onBack={() => navigateTo('home')}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="home"
+          variants={slideVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+        >
+          <LobbyHome
+            onCreateRoom={() => navigateTo('create')}
+            onJoinRoom={() => navigateTo('join')}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

@@ -5,7 +5,6 @@
 
 // Domain types
 export * from './game.types';
-export * from './sand.types';
 
 // Shared types
 export * from './geometry.types';

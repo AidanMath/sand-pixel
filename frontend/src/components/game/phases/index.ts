@@ -4,3 +4,7 @@ export { DrawingPhase } from './DrawingPhase';
 export { RevealPhase } from './RevealPhase';
 export { ResultsPhase } from './ResultsPhase';
 export { GameOverPhase } from './GameOverPhase';
+export { VotingPhase } from './VotingPhase';
+export { TelephoneDrawPhase } from './TelephoneDrawPhase';
+export { TelephoneGuessPhase } from './TelephoneGuessPhase';
+export { TelephoneRevealPhase } from './TelephoneRevealPhase';
