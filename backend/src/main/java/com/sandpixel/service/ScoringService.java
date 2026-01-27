@@ -27,6 +27,11 @@ public class ScoringService {
     private static final int FIRST_GUESS_BONUS = 100;
     private static final int MAX_DRAWER_POINTS = 300;
 
+    // Streak multipliers
+    private static final double STREAK_2_MULTIPLIER = 1.25;
+    private static final double STREAK_3_MULTIPLIER = 1.5;
+    private static final double STREAK_4_PLUS_MULTIPLIER = 2.0;
+
     public int calculateGuesserPoints(Instant phaseStartTime, int totalTime, boolean isFirstGuesser) {
         long elapsed = Duration.between(phaseStartTime, Instant.now()).toSeconds();
         double timeRatio = 1.0 - Math.min((double) elapsed / totalTime, 1.0);
@@ -38,6 +43,36 @@ public class ScoringService {
         }
 
         return Math.max(points, 50); // Minimum 50 points for correct guess
+    }
+
+    /**
+     * Calculate guesser points with streak multiplier applied.
+     * @param phaseStartTime Start time of the current phase
+     * @param totalTime Total time for the phase
+     * @param isFirstGuesser Whether this is the first correct guess
+     * @param currentStreak The player's current streak (before incrementing)
+     * @return Array of [basePoints, multipliedPoints, multiplier]
+     */
+    public double[] calculateGuesserPointsWithStreak(Instant phaseStartTime, int totalTime, boolean isFirstGuesser, int currentStreak) {
+        int basePoints = calculateGuesserPoints(phaseStartTime, totalTime, isFirstGuesser);
+
+        // Streak is about to be incremented, so newStreak = currentStreak + 1
+        int newStreak = currentStreak + 1;
+        double multiplier = getStreakMultiplier(newStreak);
+        int multipliedPoints = (int) Math.round(basePoints * multiplier);
+
+        return new double[] { basePoints, multipliedPoints, multiplier };
+    }
+
+    public double getStreakMultiplier(int streak) {
+        if (streak >= 4) {
+            return STREAK_4_PLUS_MULTIPLIER;
+        } else if (streak == 3) {
+            return STREAK_3_MULTIPLIER;
+        } else if (streak == 2) {
+            return STREAK_2_MULTIPLIER;
+        }
+        return 1.0;
     }
 
     public int calculateDrawerPoints(int correctGuessers, int totalPlayers) {
@@ -60,6 +95,7 @@ public class ScoringService {
                 scoreEntry.put("score", p.getScore());
                 scoreEntry.put("isDrawer", p.getId().equals(room.getGameState().getCurrentDrawerId()));
                 scoreEntry.put("guessedCorrectly", room.getGameState().hasGuessedCorrectly(p.getId()));
+                scoreEntry.put("currentStreak", p.getCurrentStreak());
                 return scoreEntry;
             })
             .collect(Collectors.toList());
@@ -74,6 +110,7 @@ public class ScoringService {
                 scoreEntry.put("playerName", p.getName());
                 scoreEntry.put("score", p.getScore());
                 scoreEntry.put("rank", 0); // Will be set below
+                scoreEntry.put("maxStreak", p.getMaxStreak());
                 return scoreEntry;
             })
             .collect(Collectors.toList());

@@ -52,17 +52,23 @@ public class GuessProcessor {
                 ? room.getSettings().getDrawTime()
                 : room.getSettings().getRevealTime();
 
-            int points = scoringService.calculateGuesserPoints(
-                state.getPhaseStartTime(), totalTime, isFirst);
+            // Calculate points with streak multiplier
+            double[] pointsData = scoringService.calculateGuesserPointsWithStreak(
+                state.getPhaseStartTime(), totalTime, isFirst, player.getCurrentStreak());
+            int basePoints = (int) pointsData[0];
+            int points = (int) pointsData[1];
+            double multiplier = pointsData[2];
 
+            // Increment streak before adding score
+            player.incrementStreak();
             player.addScore(points);
             state.addCorrectGuesser(player.getId());
 
-            log.info("Correct guess: roomId={}, player={}, points={}",
-                room.getId(), player.getName(), points);
+            log.info("Correct guess: roomId={}, player={}, points={}, streak={}, multiplier={}",
+                room.getId(), player.getName(), points, player.getCurrentStreak(), multiplier);
 
             broadcastService.broadcastToRoom(room.getId(), GameEvent.correctGuess(
-                player, points, state.getCorrectGuessCount()));
+                player, points, state.getCorrectGuessCount(), player.getCurrentStreak(), multiplier));
 
             return new GuessResult(GuessResultType.CORRECT, points,
                 player.getName() + " guessed correctly!");

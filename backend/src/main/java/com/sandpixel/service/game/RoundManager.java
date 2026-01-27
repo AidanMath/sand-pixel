@@ -26,12 +26,24 @@ public class RoundManager {
         if (room == null) return false;
 
         GameState state = room.getGameState();
+        RoomSettings settings = room.getSettings();
 
         // Check if game is over
         if (state.getCurrentRound() >= state.getTotalRounds()) {
             return false;
         }
 
+        // Get word options
+        String[] wordOptions = wordBankService.getWordOptions(3);
+
+        if (settings.getGameMode() == GameMode.COLLABORATIVE) {
+            return startCollaborativeRound(room, state, settings, wordOptions);
+        } else {
+            return startClassicRound(room, state, wordOptions);
+        }
+    }
+
+    private boolean startClassicRound(Room room, GameState state, String[] wordOptions) {
         // Get next drawer
         String nextDrawerSessionId = room.getNextDrawerId();
         if (nextDrawerSessionId == null) return false;
@@ -39,18 +51,15 @@ public class RoundManager {
         Player drawer = room.getPlayer(nextDrawerSessionId);
         if (drawer == null) return false;
 
-        // Get word options
-        String[] wordOptions = wordBankService.getWordOptions(3);
-
         // Start the round
         state.startNewRound(nextDrawerSessionId, drawer.getId(), wordOptions);
-        timerManager.notifyPhaseChange(roomId, GamePhase.WORD_SELECTION);
+        timerManager.notifyPhaseChange(room.getId(), GamePhase.WORD_SELECTION);
 
         log.info("Round {} started: roomId={}, drawer={} ({})",
-            state.getCurrentRound(), roomId, drawer.getName(), drawer.getId());
+            state.getCurrentRound(), room.getId(), drawer.getName(), drawer.getId());
 
         // Broadcast round start to all
-        broadcastService.broadcastToRoom(roomId, GameEvent.roundStart(
+        broadcastService.broadcastToRoom(room.getId(), GameEvent.roundStart(
             state.getCurrentRound(),
             drawer.getId(),
             0,
@@ -63,6 +72,59 @@ public class RoundManager {
         return true;
     }
 
+    private boolean startCollaborativeRound(Room room, GameState state, RoomSettings settings, String[] wordOptions) {
+        int drawerCount = Math.min(settings.getCollaborativeDrawerCount(), room.getPlayerCount());
+        if (drawerCount < 2) drawerCount = 2;
+
+        java.util.Set<String> drawerSessionIds = new java.util.HashSet<>();
+        java.util.Set<String> drawerPlayerIds = new java.util.HashSet<>();
+        java.util.List<Player> selectedDrawers = new java.util.ArrayList<>();
+
+        // Select multiple drawers
+        for (int i = 0; i < drawerCount; i++) {
+            String nextDrawerSessionId = room.getNextDrawerId();
+            if (nextDrawerSessionId == null) break;
+
+            Player drawer = room.getPlayer(nextDrawerSessionId);
+            if (drawer != null && !drawerSessionIds.contains(nextDrawerSessionId)) {
+                drawerSessionIds.add(nextDrawerSessionId);
+                drawerPlayerIds.add(drawer.getId());
+                selectedDrawers.add(drawer);
+            }
+        }
+
+        if (drawerSessionIds.size() < 2) {
+            log.warn("Not enough players for collaborative mode, falling back to classic");
+            return startClassicRound(room, state, wordOptions);
+        }
+
+        // Start the round with multiple drawers
+        state.startNewRoundCollaborative(drawerSessionIds, drawerPlayerIds, wordOptions);
+        timerManager.notifyPhaseChange(room.getId(), GamePhase.WORD_SELECTION);
+
+        String drawerNames = selectedDrawers.stream()
+            .map(Player::getName)
+            .collect(java.util.stream.Collectors.joining(" & "));
+
+        log.info("Collaborative round {} started: roomId={}, drawers={}",
+            state.getCurrentRound(), room.getId(), drawerNames);
+
+        // Broadcast round start with multiple drawer IDs
+        broadcastService.broadcastToRoom(room.getId(), GameEvent.roundStartCollaborative(
+            state.getCurrentRound(),
+            new java.util.ArrayList<>(drawerPlayerIds),
+            0,
+            ""
+        ));
+
+        // Send word options to all drawers
+        for (String sessionId : drawerSessionIds) {
+            broadcastService.sendToPlayer(sessionId, GameEvent.wordOptions(wordOptions));
+        }
+
+        return true;
+    }
+
     public void endRound(String roomId) {
         Room room = roomService.getRoom(roomId);
         if (room == null) return;
@@ -70,14 +132,38 @@ public class RoundManager {
         GameState state = room.getGameState();
         timerManager.cancelTimer(roomId);
 
-        // Award drawer points
+        // Award drawer points and save drawing for voting
         Player drawer = room.getPlayer(state.getCurrentDrawerSessionId());
-        if (drawer != null && state.getCorrectGuessCount() > 0) {
-            int drawerPoints = scoringService.calculateDrawerPoints(
-                state.getCorrectGuessCount(),
-                room.getPlayerCount()
-            );
-            drawer.addScore(drawerPoints);
+        if (drawer != null) {
+            // Save drawing for end-of-game voting
+            if (state.getCurrentWord() != null) {
+                state.saveDrawing(
+                    drawer.getId(),
+                    drawer.getName(),
+                    state.getCurrentWord(),
+                    state.getDrawingBase64()
+                );
+            }
+
+            if (state.getCorrectGuessCount() > 0) {
+                int drawerPoints = scoringService.calculateDrawerPoints(
+                    state.getCorrectGuessCount(),
+                    room.getPlayerCount()
+                );
+                drawer.addScore(drawerPoints);
+            }
+        }
+
+        // Reset streaks for players who didn't guess correctly this round
+        // The drawer doesn't lose streak (they couldn't guess)
+        for (Player player : room.getPlayerList()) {
+            if (player.getSessionId().equals(state.getCurrentDrawerSessionId())) {
+                // Drawer keeps their streak
+                continue;
+            }
+            if (!state.hasGuessedCorrectly(player.getId())) {
+                player.resetStreak();
+            }
         }
 
         state.showResults();

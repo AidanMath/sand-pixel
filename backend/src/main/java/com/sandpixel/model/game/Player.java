@@ -11,6 +11,8 @@ public class Player {
     private int score;
     private boolean ready;
     private boolean connected;
+    private int currentStreak;
+    private int maxStreak;
 
     public Player(String name, String sessionId) {
         this.id = UUID.randomUUID().toString().substring(0, 8);
@@ -19,9 +21,22 @@ public class Player {
         this.score = 0;
         this.ready = false;
         this.connected = true;
+        this.currentStreak = 0;
+        this.maxStreak = 0;
     }
 
     public void addScore(int points) {
         this.score += points;
+    }
+
+    public void incrementStreak() {
+        this.currentStreak++;
+        if (this.currentStreak > this.maxStreak) {
+            this.maxStreak = this.currentStreak;
+        }
+    }
+
+    public void resetStreak() {
+        this.currentStreak = 0;
     }
 }

@@ -18,16 +18,23 @@ public class PhaseManager {
      *                                                                 |
      *                                                           WORD_SELECTION (next round)
      *                                                                 |
-     *                                                           GAME_OVER -> LOBBY
+     *                                                           GAME_OVER -> VOTING -> LOBBY
+     *
+     * Telephone mode:
+     * COUNTDOWN -> TELEPHONE_DRAW -> TELEPHONE_GUESS -> TELEPHONE_DRAW -> ... -> TELEPHONE_REVEAL -> RESULTS
      */
-    private static final Map<GamePhase, Set<GamePhase>> VALID_TRANSITIONS = Map.of(
-        GamePhase.LOBBY, Set.of(GamePhase.COUNTDOWN),
-        GamePhase.COUNTDOWN, Set.of(GamePhase.WORD_SELECTION),
-        GamePhase.WORD_SELECTION, Set.of(GamePhase.DRAWING),
-        GamePhase.DRAWING, Set.of(GamePhase.REVEAL),
-        GamePhase.REVEAL, Set.of(GamePhase.RESULTS),
-        GamePhase.RESULTS, Set.of(GamePhase.WORD_SELECTION, GamePhase.GAME_OVER),
-        GamePhase.GAME_OVER, Set.of(GamePhase.LOBBY)
+    private static final Map<GamePhase, Set<GamePhase>> VALID_TRANSITIONS = Map.ofEntries(
+        Map.entry(GamePhase.LOBBY, Set.of(GamePhase.COUNTDOWN)),
+        Map.entry(GamePhase.COUNTDOWN, Set.of(GamePhase.WORD_SELECTION, GamePhase.TELEPHONE_DRAW)),
+        Map.entry(GamePhase.WORD_SELECTION, Set.of(GamePhase.DRAWING)),
+        Map.entry(GamePhase.DRAWING, Set.of(GamePhase.REVEAL)),
+        Map.entry(GamePhase.REVEAL, Set.of(GamePhase.RESULTS)),
+        Map.entry(GamePhase.RESULTS, Set.of(GamePhase.WORD_SELECTION, GamePhase.GAME_OVER, GamePhase.TELEPHONE_DRAW)),
+        Map.entry(GamePhase.GAME_OVER, Set.of(GamePhase.VOTING, GamePhase.LOBBY)),
+        Map.entry(GamePhase.VOTING, Set.of(GamePhase.LOBBY)),
+        Map.entry(GamePhase.TELEPHONE_DRAW, Set.of(GamePhase.TELEPHONE_GUESS, GamePhase.TELEPHONE_REVEAL)),
+        Map.entry(GamePhase.TELEPHONE_GUESS, Set.of(GamePhase.TELEPHONE_DRAW, GamePhase.TELEPHONE_REVEAL)),
+        Map.entry(GamePhase.TELEPHONE_REVEAL, Set.of(GamePhase.RESULTS, GamePhase.TELEPHONE_DRAW))
     );
 
     public boolean canTransition(GamePhase from, GamePhase to) {

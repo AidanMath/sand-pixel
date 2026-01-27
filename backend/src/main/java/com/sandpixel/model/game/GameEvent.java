@@ -42,6 +42,17 @@ public class GameEvent {
         return new GameEvent("ROUND_START", Map.of(
             "round", round,
             "drawerId", drawerId,
+            "drawerIds", List.of(drawerId),
+            "wordLength", wordLength,
+            "wordHint", wordHint
+        ));
+    }
+
+    public static GameEvent roundStartCollaborative(int round, List<String> drawerIds, int wordLength, String wordHint) {
+        return new GameEvent("ROUND_START", Map.of(
+            "round", round,
+            "drawerId", drawerIds.isEmpty() ? "" : drawerIds.get(0),
+            "drawerIds", drawerIds,
             "wordLength", wordLength,
             "wordHint", wordHint
         ));
@@ -64,11 +75,17 @@ public class GameEvent {
     }
 
     public static GameEvent correctGuess(Player player, int points, int totalGuessers) {
+        return correctGuess(player, points, totalGuessers, 0, 1.0);
+    }
+
+    public static GameEvent correctGuess(Player player, int points, int totalGuessers, int streak, double multiplier) {
         return new GameEvent("CORRECT_GUESS", Map.of(
             "playerId", player.getId(),
             "playerName", player.getName(),
             "points", points,
-            "totalGuessers", totalGuessers
+            "totalGuessers", totalGuessers,
+            "streak", streak,
+            "multiplier", multiplier
         ));
     }
 
@@ -92,6 +109,16 @@ public class GameEvent {
         return new GameEvent("CHAT", message);
     }
 
+    // Reaction
+    public static GameEvent reaction(Reaction reaction) {
+        return new GameEvent("REACTION", Map.of(
+            "playerId", reaction.getPlayerId(),
+            "playerName", reaction.getPlayerName(),
+            "emoji", reaction.getEmoji(),
+            "timestamp", reaction.getTimestamp()
+        ));
+    }
+
     // Utility
     public static GameEvent error(String message) {
         return new GameEvent("ERROR", Map.of("message", message));
@@ -103,5 +130,68 @@ public class GameEvent {
 
     public static GameEvent wordSelected(String word) {
         return new GameEvent("WORD_SELECTED", Map.of("word", word));
+    }
+
+    // Voting events
+    public static GameEvent votingStart(List<DrawingEntry> drawings, int votingTime) {
+        return new GameEvent("VOTING_START", Map.of(
+            "drawings", drawings.stream().map(d -> Map.of(
+                "drawerId", d.getDrawerId(),
+                "drawerName", d.getDrawerName(),
+                "word", d.getWord(),
+                "drawingBase64", d.getDrawingBase64() != null ? d.getDrawingBase64() : ""
+            )).toList(),
+            "votingTime", votingTime
+        ));
+    }
+
+    public static GameEvent voteReceived(String voterId, String voterName, int totalVotes, int totalPlayers) {
+        return new GameEvent("VOTE_RECEIVED", Map.of(
+            "voterId", voterId,
+            "voterName", voterName,
+            "totalVotes", totalVotes,
+            "totalPlayers", totalPlayers
+        ));
+    }
+
+    public static GameEvent votingResults(List<Map<String, Object>> results, String winnerId, int bonusPoints) {
+        return new GameEvent("VOTING_RESULTS", Map.of(
+            "results", results,
+            "winnerId", winnerId != null ? winnerId : "",
+            "bonusPoints", bonusPoints
+        ));
+    }
+
+    // Telephone mode events
+    public static GameEvent telephoneDraw(String playerId, String playerName, int drawTime, int remainingPlayers) {
+        return new GameEvent("TELEPHONE_DRAW", Map.of(
+            "playerId", playerId,
+            "playerName", playerName,
+            "drawTime", drawTime,
+            "remainingPlayers", remainingPlayers
+        ));
+    }
+
+    public static GameEvent telephoneGuess(String playerId, String playerName, int guessTime, int remainingPlayers) {
+        return new GameEvent("TELEPHONE_GUESS", Map.of(
+            "playerId", playerId,
+            "playerName", playerName,
+            "guessTime", guessTime,
+            "remainingPlayers", remainingPlayers
+        ));
+    }
+
+    public static GameEvent telephonePrompt(String prompt, String type) {
+        return new GameEvent("TELEPHONE_PROMPT", Map.of(
+            "prompt", prompt,
+            "type", type  // "word", "guess", or "drawing"
+        ));
+    }
+
+    public static GameEvent telephoneReveal(String originalWord, List<Map<String, Object>> chain) {
+        return new GameEvent("TELEPHONE_REVEAL", Map.of(
+            "originalWord", originalWord,
+            "chain", chain
+        ));
     }
 }

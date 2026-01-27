@@ -123,6 +123,8 @@ public class Room {
         players.values().forEach(p -> {
             p.setScore(0);
             p.setReady(false);
+            p.setCurrentStreak(0);
+            p.setMaxStreak(0);
         });
         this.gameState = new GameState(settings.getTotalRounds());
     }

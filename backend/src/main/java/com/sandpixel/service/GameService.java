@@ -5,6 +5,8 @@ import com.sandpixel.service.game.GuessProcessor;
 import com.sandpixel.service.game.PhaseManager;
 import com.sandpixel.service.game.RoundManager;
 import com.sandpixel.service.game.TimerManager;
+import com.sandpixel.service.game.VotingManager;
+import com.sandpixel.service.game.TelephoneManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,8 @@ public class GameService {
     private final PhaseManager phaseManager;
     private final RoundManager roundManager;
     private final GuessProcessor guessProcessor;
+    private final VotingManager votingManager;
+    private final TelephoneManager telephoneManager;
 
     public void startGame(String roomId) {
         Room room = roomService.getRoom(roomId);
@@ -44,9 +48,19 @@ public class GameService {
     }
 
     public void startNextRound(String roomId) {
+        Room room = roomService.getRoom(roomId);
+        if (room == null) return;
+
         if (roundManager.isGameOver(roomId)) {
             roundManager.endGame(roomId);
-            timerManager.scheduleTask(roomId, () -> roundManager.resetRoom(roomId), 10);
+            // Schedule voting phase after showing game over results
+            timerManager.scheduleTask(roomId, () -> votingManager.startVotingPhase(roomId), 8);
+            return;
+        }
+
+        // Check if this is telephone mode
+        if (room.getSettings().getGameMode() == GameMode.TELEPHONE) {
+            telephoneManager.startTelephoneRound(roomId);
             return;
         }
 
@@ -74,7 +88,8 @@ public class GameService {
 
         GameState state = room.getGameState();
 
-        if (!sessionId.equals(state.getCurrentDrawerSessionId())) {
+        // Allow any drawer to select the word
+        if (!state.isDrawer(sessionId)) {
             log.warn("Non-drawer tried to select word");
             return;
         }
@@ -103,8 +118,10 @@ public class GameService {
             state.getWordHint()
         ));
 
-        broadcastService.sendToPlayer(state.getCurrentDrawerSessionId(),
-            GameEvent.wordSelected(selectedWord));
+        // Send word to all drawers
+        for (String drawerSessionId : state.getCurrentDrawerSessionIds()) {
+            broadcastService.sendToPlayer(drawerSessionId, GameEvent.wordSelected(selectedWord));
+        }
 
         timerManager.scheduleTask(roomId, GamePhase.DRAWING,
             () -> timeoutDrawing(roomId),
@@ -131,12 +148,13 @@ public class GameService {
         }
 
         GameState state = room.getGameState();
-        log.info("submitDrawing: currentDrawerSessionId={}, currentPhase={}",
-            state.getCurrentDrawerSessionId(), state.getPhase());
+        log.info("submitDrawing: drawerSessionIds={}, currentPhase={}",
+            state.getCurrentDrawerSessionIds(), state.getPhase());
 
-        if (!sessionId.equals(state.getCurrentDrawerSessionId())) {
-            log.warn("submitDrawing: non-drawer tried to submit. sessionId={}, drawerSessionId={}",
-                sessionId, state.getCurrentDrawerSessionId());
+        // Allow any drawer to submit the drawing
+        if (!state.isDrawer(sessionId)) {
+            log.warn("submitDrawing: non-drawer tried to submit. sessionId={}, drawerSessionIds={}",
+                sessionId, state.getCurrentDrawerSessionIds());
             return;
         }
 

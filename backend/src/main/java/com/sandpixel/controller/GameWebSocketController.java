@@ -4,6 +4,8 @@ import com.sandpixel.model.game.*;
 import com.sandpixel.service.BroadcastService;
 import com.sandpixel.service.GameService;
 import com.sandpixel.service.RoomService;
+import com.sandpixel.service.game.VotingManager;
+import com.sandpixel.service.game.TelephoneManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -26,6 +28,8 @@ public class GameWebSocketController {
     private final RoomService roomService;
     private final GameService gameService;
     private final BroadcastService broadcastService;
+    private final VotingManager votingManager;
+    private final TelephoneManager telephoneManager;
 
     @EventListener
     public void handleWebSocketConnect(SessionConnectEvent event) {
@@ -140,7 +144,8 @@ public class GameWebSocketController {
         if (room == null) return;
 
         GameState state = room.getGameState();
-        if (state == null || !sessionId.equals(state.getCurrentDrawerSessionId())) {
+        // Allow drawing if player is any of the drawers (for collaborative mode)
+        if (state == null || !state.isDrawer(sessionId)) {
             return;
         }
 
@@ -180,5 +185,54 @@ public class GameWebSocketController {
 
             broadcastService.broadcastToRoom(roomId, GameEvent.chat(message));
         }
+    }
+
+    private static final java.util.Set<String> ALLOWED_EMOJIS = java.util.Set.of(
+        "\uD83D\uDC4D", "\uD83D\uDC4F", "\uD83D\uDE02", "\uD83D\uDD25", "❤️",
+        "\uD83D\uDE2E", "\uD83E\uDD14", "\uD83D\uDE2D", "\uD83D\uDC80", "\uD83C\uDFA8"
+    );
+
+    @MessageMapping("/room/{roomId}/react")
+    public void sendReaction(@DestinationVariable String roomId,
+                             @Payload ReactionRequest request,
+                             SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        Player player = roomService.getPlayerBySession(sessionId);
+        Room room = roomService.getRoom(roomId);
+
+        if (player == null || room == null) return;
+
+        // Validate emoji is allowed
+        if (!ALLOWED_EMOJIS.contains(request.getEmoji())) {
+            return;
+        }
+
+        Reaction reaction = new Reaction(player.getId(), player.getName(), request.getEmoji());
+        broadcastService.broadcastToRoom(roomId, GameEvent.reaction(reaction));
+    }
+
+    @MessageMapping("/room/{roomId}/vote")
+    public void submitVote(@DestinationVariable String roomId,
+                           @Payload VoteRequest request,
+                           SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        votingManager.processVote(roomId, sessionId, request.getDrawingDrawerId());
+    }
+
+    @MessageMapping("/room/{roomId}/telephone-draw")
+    public void submitTelephoneDrawing(@DestinationVariable String roomId,
+                                       @Payload SubmitDrawingRequest request,
+                                       SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        String drawingBase64 = request.getDrawingBase64();
+        telephoneManager.submitTelephoneDrawing(roomId, sessionId, drawingBase64);
+    }
+
+    @MessageMapping("/room/{roomId}/telephone-guess")
+    public void submitTelephoneGuess(@DestinationVariable String roomId,
+                                     @Payload GuessRequest request,
+                                     SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        telephoneManager.submitTelephoneGuess(roomId, sessionId, request.getText());
     }
 }

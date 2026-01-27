@@ -7,5 +7,9 @@ public enum GamePhase {
     DRAWING,
     REVEAL,
     RESULTS,
-    GAME_OVER
+    GAME_OVER,
+    VOTING,
+    TELEPHONE_DRAW,
+    TELEPHONE_GUESS,
+    TELEPHONE_REVEAL
 }
