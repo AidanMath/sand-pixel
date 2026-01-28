@@ -7,6 +7,17 @@ import type {
   RoomSettings,
   DrawStroke,
 } from '../types/game.types';
+import {
+  validatePlayerName,
+  validateRoomCode,
+  validateTextInput,
+  validateEmoji,
+  validateWordIndex,
+  validateDrawingData,
+  validatePlayerId,
+  validateDrawStroke,
+  LIMITS,
+} from '../utils/validation/inputValidation';
 
 type EventCallback = (event: GameEvent) => void;
 type RoomCallback = (response: RoomResponse) => void;
@@ -185,72 +196,133 @@ class WebSocketService {
   }
 
   // Actions
-  private send(destination: string, body: object) {
+  private send(destination: string, body: object): boolean {
     if (!this.client || !this.connected) {
       console.error('WebSocket not connected');
-      return;
+      return false;
     }
     this.client.publish({
       destination,
       body: JSON.stringify(body),
     });
+    return true;
   }
 
-  createRoom(playerName: string, settings?: Partial<RoomSettings>) {
-    this.send('/app/room/create', { playerName, settings });
+  createRoom(playerName: string, settings?: Partial<RoomSettings>): boolean {
+    const validation = validatePlayerName(playerName);
+    if (!validation.valid) {
+      console.error('Validation failed:', validation.error);
+      return false;
+    }
+    return this.send('/app/room/create', { playerName: playerName.trim(), settings });
   }
 
-  joinRoom(roomId: string, playerName: string) {
-    this.send('/app/room/join', { roomId, playerName });
+  joinRoom(roomId: string, playerName: string): boolean {
+    const roomValidation = validateRoomCode(roomId);
+    if (!roomValidation.valid) {
+      console.error('Room code validation failed:', roomValidation.error);
+      return false;
+    }
+
+    const nameValidation = validatePlayerName(playerName);
+    if (!nameValidation.valid) {
+      console.error('Name validation failed:', nameValidation.error);
+      return false;
+    }
+
+    return this.send('/app/room/join', {
+      roomId: roomId.trim().toUpperCase(),
+      playerName: playerName.trim()
+    });
   }
 
-  leaveRoom(roomId: string) {
+  leaveRoom(roomId: string): void {
     this.send(`/app/room/${roomId}/leave`, {});
     this.unsubscribeFromRoom(roomId);
   }
 
-  toggleReady(roomId: string) {
-    this.send(`/app/room/${roomId}/ready`, {});
+  toggleReady(roomId: string): boolean {
+    return this.send(`/app/room/${roomId}/ready`, {});
   }
 
-  startGame(roomId: string) {
-    this.send(`/app/room/${roomId}/start`, {});
+  startGame(roomId: string): boolean {
+    return this.send(`/app/room/${roomId}/start`, {});
   }
 
-  selectWord(roomId: string, wordIndex: number) {
-    this.send(`/app/room/${roomId}/word-select`, { wordIndex });
+  selectWord(roomId: string, wordIndex: number): boolean {
+    const validation = validateWordIndex(wordIndex);
+    if (!validation.valid) {
+      console.error('Word selection validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/word-select`, { wordIndex });
   }
 
-  sendDrawStroke(roomId: string, stroke: DrawStroke) {
-    this.send(`/app/room/${roomId}/draw-stroke`, stroke);
+  sendDrawStroke(roomId: string, stroke: DrawStroke): boolean {
+    const validation = validateDrawStroke(stroke);
+    if (!validation.valid) {
+      console.error('Stroke validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/draw-stroke`, stroke);
   }
 
-  submitDrawing(roomId: string) {
-    this.send(`/app/room/${roomId}/submit-drawing`, {});
+  submitDrawing(roomId: string): boolean {
+    return this.send(`/app/room/${roomId}/submit-drawing`, {});
   }
 
-  sendGuess(roomId: string, text: string) {
-    this.send(`/app/room/${roomId}/guess`, { text });
+  sendGuess(roomId: string, text: string): boolean {
+    const validation = validateTextInput(text, LIMITS.GUESS_MAX_LENGTH);
+    if (!validation.valid) {
+      console.error('Guess validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/guess`, { text: text.trim() });
   }
 
-  sendChat(roomId: string, text: string) {
-    this.send(`/app/room/${roomId}/chat`, { text });
+  sendChat(roomId: string, text: string): boolean {
+    const validation = validateTextInput(text, LIMITS.CHAT_MAX_LENGTH);
+    if (!validation.valid) {
+      console.error('Chat validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/chat`, { text: text.trim() });
   }
 
-  sendReaction(roomId: string, emoji: string) {
-    this.send(`/app/room/${roomId}/react`, { emoji });
+  sendReaction(roomId: string, emoji: string): boolean {
+    const validation = validateEmoji(emoji);
+    if (!validation.valid) {
+      console.error('Reaction validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/react`, { emoji });
   }
 
-  submitVote(roomId: string, drawingDrawerId: string) {
-    this.send(`/app/room/${roomId}/vote`, { drawingDrawerId });
+  submitVote(roomId: string, drawingDrawerId: string): boolean {
+    const validation = validatePlayerId(drawingDrawerId);
+    if (!validation.valid) {
+      console.error('Vote validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/vote`, { drawingDrawerId });
   }
 
-  submitTelephoneDrawing(roomId: string, drawingBase64: string) {
-    this.send(`/app/room/${roomId}/telephone-draw`, { drawingBase64 });
+  submitTelephoneDrawing(roomId: string, drawingBase64: string): boolean {
+    const validation = validateDrawingData(drawingBase64);
+    if (!validation.valid) {
+      console.error('Drawing validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/telephone-draw`, { drawingBase64 });
   }
 
-  submitTelephoneGuess(roomId: string, text: string) {
-    this.send(`/app/room/${roomId}/telephone-guess`, { text });
+  submitTelephoneGuess(roomId: string, text: string): boolean {
+    const validation = validateTextInput(text, LIMITS.GUESS_MAX_LENGTH);
+    if (!validation.valid) {
+      console.error('Telephone guess validation failed:', validation.error);
+      return false;
+    }
+    return this.send(`/app/room/${roomId}/telephone-guess`, { text: text.trim() });
   }
 }
 
