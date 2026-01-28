@@ -67,6 +67,10 @@ export function DrawingPhase({
 }: DrawingPhaseProps) {
   const hasGuessed = myPlayer && room.gameState.correctGuessers?.includes(myPlayer.id);
 
+  // In collaborative mode, drawers should also receive other drawers' strokes
+  const isCollaborativeMode = room.settings.gameMode === 'COLLABORATIVE';
+  const shouldReceiveRemoteStrokes = !isDrawer || isCollaborativeMode;
+
   return (
     <div className="min-h-screen bg-zinc-900 text-white p-4">
       <div className="max-w-7xl mx-auto">
@@ -112,7 +116,7 @@ export function DrawingPhase({
                 onStroke={onStroke}
                 onDrawingChange={onDrawingChange}
                 disabled={!isDrawer}
-                remoteStrokes={isDrawer ? [] : remoteStrokes}
+                remoteStrokes={shouldReceiveRemoteStrokes ? remoteStrokes : []}
                 undoTrigger={undoTrigger}
                 clearTrigger={clearTrigger}
               />

@@ -7,27 +7,31 @@ export function CountdownPhase() {
   // Use countdown from store (synced with backend)
   const backendCountdown = useGameStore((state) => state.countdown);
 
-  // Local state for display
-  const [displayCount, setDisplayCount] = useState<number | 'draw'>(3);
-  const lastBackendCount = useRef<number | null>(null);
-  const isFirstMount = useRef(true);
-
-  // Initialize local countdown when component mounts
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      // Start countdown from 3
-      setDisplayCount(3);
-    }
-  }, []);
+  // Local state for display - start with backend value or 3 as fallback
+  // Backend sends countdown(3) for 3-2-1-Draw! sequence
+  const [displayCount, setDisplayCount] = useState<number | 'draw'>(() => {
+    return backendCountdown ?? 3;
+  });
+  const lastBackendCount = useRef<number | null>(backendCountdown);
+  const hasReceivedBackend = useRef(backendCountdown !== null);
 
   // Sync with backend countdown when it arrives
   useEffect(() => {
     if (backendCountdown !== null && backendCountdown !== lastBackendCount.current) {
       lastBackendCount.current = backendCountdown;
+      hasReceivedBackend.current = true;
       setDisplayCount(backendCountdown);
     }
   }, [backendCountdown]);
+
+  // If backend hasn't sent a value yet but we're in countdown phase,
+  // start local countdown from a reasonable default
+  useEffect(() => {
+    if (!hasReceivedBackend.current && typeof displayCount === 'number' && displayCount > 3) {
+      // Cap at 3 if somehow started higher
+      setDisplayCount(3);
+    }
+  }, []);
 
   // Local countdown timer (fallback if backend doesn't send updates)
   useEffect(() => {

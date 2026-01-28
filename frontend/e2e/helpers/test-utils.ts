@@ -104,15 +104,24 @@ export async function createRoom(page: Page, playerName: string): Promise<string
 export async function createRoomWithMode(
   page: Page,
   playerName: string,
-  mode: 'CLASSIC' | 'COLLABORATIVE' | 'TELEPHONE'
+  mode: 'CLASSIC' | 'COLLABORATIVE' | 'TELEPHONE',
+  options?: { collaborativeDrawerCount?: number }
 ): Promise<string> {
   await page.click('text=Create Room');
   await page.fill('input[placeholder="Enter your name"]', playerName);
 
-  // Select game mode from dropdown/radio if available
-  const modeSelector = page.locator(`[data-testid="game-mode-${mode.toLowerCase()}"]`);
-  if (await modeSelector.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await modeSelector.click();
+  // Select game mode from the select dropdown
+  const modeSelect = page.locator('select').filter({ hasText: 'Classic' });
+  await modeSelect.selectOption(mode);
+
+  // If collaborative mode, select drawer count
+  if (mode === 'COLLABORATIVE' && options?.collaborativeDrawerCount) {
+    // Wait for the drawer count selector to appear - it's labeled "Number of Drawers"
+    const drawerLabel = page.locator('text=Number of Drawers');
+    await expect(drawerLabel).toBeVisible({ timeout: 5000 });
+    // The select is the next sibling element
+    const drawerCountSelect = drawerLabel.locator('..').locator('select');
+    await drawerCountSelect.selectOption(String(options.collaborativeDrawerCount));
   }
 
   await page.click('button:has-text("Create Room")');
@@ -286,29 +295,69 @@ export async function waitForPhase(page: Page, phase: GamePhase, timeout = 30000
 // ============================================
 
 /**
- * Waits for telephone draw phase
+ * Waits for telephone draw phase (either as drawer or waiting)
  */
 export async function waitForTelephoneDraw(page: Page, timeout = 30000): Promise<void> {
-  // Look for telephone drawing indicators
-  await expect(page.locator('text=drawing')).toBeVisible({ timeout });
+  // Could be either active drawer or waiting for someone else
+  await expect(
+    page.locator('text=Draw this word:').or(page.locator('text=Draw what you see:')).or(page.locator('text=is drawing'))
+  ).toBeVisible({ timeout });
 }
 
 /**
- * Waits for telephone guess phase
+ * Waits for telephone guess phase (either as guesser or waiting)
  */
 export async function waitForTelephoneGuess(page: Page, timeout = 30000): Promise<void> {
-  // Look for guess input in telephone mode
-  await expect(page.locator('text=What do you see')).toBeVisible({ timeout });
+  // Could be either active guesser or waiting
+  await expect(page.locator('text=What do you think this is?').or(page.locator('text=is guessing'))).toBeVisible({
+    timeout,
+  });
+}
+
+/**
+ * Waits for telephone reveal phase
+ */
+export async function waitForTelephoneReveal(page: Page, timeout = 30000): Promise<void> {
+  await expect(page.locator('text=The original word was')).toBeVisible({ timeout });
+}
+
+/**
+ * Checks if player is the active participant in telephone mode
+ */
+export async function isTelephoneActivePlayer(page: Page): Promise<boolean> {
+  // Active drawer sees "Draw this word" or "Draw what you see"
+  const isDrawer = await page
+    .locator('text=Draw this word:')
+    .or(page.locator('text=Draw what you see:'))
+    .isVisible({ timeout: 1000 })
+    .catch(() => false);
+
+  // Active guesser sees "What do you think this is?"
+  const isGuesser = await page
+    .locator('text=What do you think this is?')
+    .isVisible({ timeout: 1000 })
+    .catch(() => false);
+
+  return isDrawer || isGuesser;
 }
 
 /**
  * Submits a guess in telephone mode
  */
 export async function submitTelephoneGuess(page: Page, guess: string): Promise<void> {
-  const input = page.locator('input[placeholder*="guess"], input[type="text"]');
+  const input = page.locator('input[placeholder="Type your guess..."]');
   await input.fill(guess);
   const submitButton = page.locator('button:has-text("Submit")');
   await submitButton.click();
+}
+
+/**
+ * Submits a drawing in telephone mode
+ */
+export async function submitTelephoneDrawing(page: Page): Promise<void> {
+  await drawOnCanvas(page);
+  const doneButton = page.locator('button:has-text("Done Drawing")');
+  await doneButton.click();
 }
 
 // ============================================

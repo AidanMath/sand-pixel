@@ -41,10 +41,11 @@ public class GameService {
         }
         timerManager.notifyPhaseChange(roomId, GamePhase.COUNTDOWN);
 
-        broadcastService.broadcastToRoom(roomId, GameEvent.countdown(2));
+        // Send countdown starting at 3, wait 4 seconds for 3-2-1-Draw! sequence
+        broadcastService.broadcastToRoom(roomId, GameEvent.countdown(3));
 
         timerManager.scheduleTask(roomId, GamePhase.COUNTDOWN,
-            () -> startNextRound(roomId), 2);
+            () -> startNextRound(roomId), 4);
     }
 
     public void startNextRound(String roomId) {
