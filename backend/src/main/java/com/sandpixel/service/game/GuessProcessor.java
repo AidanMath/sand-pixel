@@ -42,7 +42,11 @@ public class GuessProcessor {
         GameState state = room.getGameState();
         String word = state.getCurrentWord();
 
+        log.debug("Processing guess: roomId={}, player={}, guess='{}', word='{}'",
+            room.getId(), player.getName(), guess, word);
+
         if (word == null) {
+            log.debug("No current word set, rejecting guess");
             return new GuessResult(GuessResultType.WRONG, 0, null);
         }
 
@@ -97,20 +101,26 @@ public class GuessProcessor {
         GameState state = room.getGameState();
         Player player = room.getPlayer(sessionId);
 
-        if (player == null) return false;
+        if (player == null) {
+            log.debug("canPlayerGuess: player not found for sessionId={}", sessionId);
+            return false;
+        }
 
         // Can't guess if you're the drawer
         if (sessionId.equals(state.getCurrentDrawerSessionId())) {
+            log.debug("canPlayerGuess: player {} is the drawer, cannot guess", player.getName());
             return false;
         }
 
         // Can only guess during drawing or reveal phases
         if (state.getPhase() != GamePhase.DRAWING && state.getPhase() != GamePhase.REVEAL) {
+            log.debug("canPlayerGuess: wrong phase {} for player {}", state.getPhase(), player.getName());
             return false;
         }
 
         // Already guessed correctly
         if (state.hasGuessedCorrectly(player.getId())) {
+            log.debug("canPlayerGuess: player {} already guessed correctly", player.getName());
             return false;
         }
 
