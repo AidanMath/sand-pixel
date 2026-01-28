@@ -35,7 +35,7 @@
 ### 0.3 - Technical Debt Cleanup
 - [x] Remove outdated CLAUDE_CONTEXT.md from frontend (also added .gitignore)
 - [x] Add backend unit tests for core services (GuessValidator: 30 tests, ScoringService: 28 tests)
-- [ ] Add input validation on frontend before WebSocket sends
+- [x] Add input validation on frontend before WebSocket sends (32 tests, integrated into WebSocket service)
 - [ ] Add proper logging with log levels in backend
 
 ---
@@ -155,7 +155,22 @@
 
 ## Phase 2: Pictionary Polish (Existing Game)
 
-### 2.0 - Planning & Design
+### 2.0 - Ideation & Creative Direction
+- [ ] Brainstorm game identity and branding
+  - Research successful party game branding (Jackbox naming conventions)
+  - Generate 5+ name options for the drawing game
+  - Consider how name ties into "The Hub" platform identity
+  - Document reasoning in DESIGN-PICTIONARY.md
+- [ ] Explore unique feature ideas that differentiate from competitors
+  - What makes this better than Skribbl.io, Gartic Phone?
+  - Brainstorm 3-5 innovative features (e.g., AI hints, theme packs, replay sharing)
+  - Prioritize based on effort vs impact
+- [ ] Define visual identity
+  - Mood board for the drawing game aesthetic
+  - How does it feel different from other games on the platform?
+  - Color accent, iconography, sound design direction
+
+### 2.1 - Planning & Design
 - [ ] Define "Sand Draw" branding and identity
   - Name confirmation (Sand Draw? Pixel Sketch? Other?)
   - How it fits within the platform aesthetic
@@ -452,7 +467,51 @@
 
 ---
 
-## Backlog (Future Phases)
+## Phase 8: Future Ideation & Expansion
+
+### 8.0 - New Game Ideation
+- [ ] Research and brainstorm additional game ideas
+  - Analyze trending party games (BoardGameGeek, Steam party games)
+  - Study what makes games go viral (Among Us, Fall Guys, Jackbox)
+  - Create list of 10+ potential games with brief descriptions
+  - Document in IDEAS.md
+- [ ] Evaluate and prioritize new game concepts
+  - Score each idea on: fun factor, implementation complexity, uniqueness
+  - Consider multiplayer dynamics (competitive vs cooperative)
+  - Pick top 3 candidates for future development
+- [ ] Prototype test one new game concept
+  - Create paper prototype or simple digital mockup
+  - Test with small group if possible
+  - Document learnings
+
+### 8.1 - Platform Feature Ideation
+- [ ] Brainstorm social features
+  - Friend lists, party codes, recurring game nights
+  - Tournaments and leaderboards across games
+  - Clips/highlights sharing
+- [ ] Explore monetization options (if desired)
+  - Cosmetics, themes, custom word packs
+  - Premium rooms with more players
+  - Keep core experience free
+- [ ] Consider community features
+  - User-generated content (custom word lists, trivia packs)
+  - Game rating/feedback system
+  - Community challenges/events
+
+### 8.2 - Technical Innovation Ideas
+- [ ] Research emerging tech opportunities
+  - AI integration (AI players, smart hints, generated content)
+  - Voice chat integration
+  - Mobile app vs PWA decision
+  - VR/AR party games (long-term)
+- [ ] Performance and scale planning
+  - What does 1000 concurrent rooms look like?
+  - CDN for assets, regional servers
+  - Database persistence strategy
+
+---
+
+## Backlog (Lower Priority)
 
 - [ ] Private rooms with password protection
 - [ ] More Werewolf roles (Hunter, Witch, Cupid)
