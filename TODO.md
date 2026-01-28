@@ -36,7 +36,7 @@
 - [x] Remove outdated CLAUDE_CONTEXT.md from frontend (also added .gitignore)
 - [x] Add backend unit tests for core services (GuessValidator: 30 tests, ScoringService: 28 tests)
 - [x] Add input validation on frontend before WebSocket sends (32 tests, integrated into WebSocket service)
-- [ ] Add proper logging with log levels in backend
+- [x] Add proper logging with log levels in backend
 
 ---
 
