@@ -1,15 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useGameStore } from '../../../stores/gameStore';
 import { countdownNumber, springBouncy } from '../../../utils/animations';
 
 export function CountdownPhase() {
-  const [count, setCount] = useState(3);
+  // Use countdown from store (synced with backend)
+  const backendCountdown = useGameStore((state) => state.countdown);
 
+  // Local state for display
+  const [displayCount, setDisplayCount] = useState<number | 'draw'>(3);
+  const lastBackendCount = useRef<number | null>(null);
+  const isFirstMount = useRef(true);
+
+  // Initialize local countdown when component mounts
   useEffect(() => {
-    if (count <= 0) return;
-    const timer = setTimeout(() => setCount((c) => c - 1), 1000);
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      // Start countdown from 3
+      setDisplayCount(3);
+    }
+  }, []);
+
+  // Sync with backend countdown when it arrives
+  useEffect(() => {
+    if (backendCountdown !== null && backendCountdown !== lastBackendCount.current) {
+      lastBackendCount.current = backendCountdown;
+      setDisplayCount(backendCountdown);
+    }
+  }, [backendCountdown]);
+
+  // Local countdown timer (fallback if backend doesn't send updates)
+  useEffect(() => {
+    if (typeof displayCount !== 'number' || displayCount <= 0) return;
+
+    const timer = setTimeout(() => {
+      if (displayCount === 1) {
+        setDisplayCount('draw');
+      } else {
+        setDisplayCount(displayCount - 1);
+      }
+    }, 1000);
+
     return () => clearTimeout(timer);
-  }, [count]);
+  }, [displayCount]);
+
+  // Auto-clear "Draw!" after a short moment (in case phase doesn't change)
+  useEffect(() => {
+    if (displayCount !== 'draw') return;
+
+    const timer = setTimeout(() => {
+      // Keep showing "Draw!" - phase transition will handle removal
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [displayCount]);
+
+  const showNumber = typeof displayCount === 'number' && displayCount > 0;
+  const showDraw = displayCount === 'draw' || displayCount === 0;
 
   return (
     <div className="min-h-screen bg-zinc-900 flex items-center justify-center relative overflow-hidden">
@@ -22,9 +69,9 @@ export function CountdownPhase() {
 
       <div className="text-center relative z-10">
         <AnimatePresence mode="wait">
-          {count > 0 ? (
+          {showNumber ? (
             <motion.div
-              key={count}
+              key={displayCount}
               variants={countdownNumber}
               initial="initial"
               animate="animate"
@@ -32,9 +79,9 @@ export function CountdownPhase() {
               transition={springBouncy}
               className="text-9xl font-bold text-white"
             >
-              {count}
+              {displayCount}
             </motion.div>
-          ) : (
+          ) : showDraw ? (
             <motion.div
               key="draw"
               variants={countdownNumber}
@@ -46,7 +93,7 @@ export function CountdownPhase() {
             >
               Draw!
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </div>

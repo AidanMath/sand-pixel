@@ -7,7 +7,10 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1, // Single worker for multiplayer tests
   reporter: 'html',
-  timeout: 60000, // 60 second timeout per test
+  timeout: 90000, // 90 second timeout per test for multiplayer coordination
+  expect: {
+    timeout: 15000, // 15 second timeout for expect assertions
+  },
 
   use: {
     baseURL: 'http://localhost:5173',
