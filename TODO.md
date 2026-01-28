@@ -33,8 +33,8 @@
   - **Note**: Full E2E test skipped due to round duration (45s draw + 30s guess per player)
 
 ### 0.3 - Technical Debt Cleanup
-- [ ] Remove outdated CLAUDE_CONTEXT.md from frontend
-- [ ] Add backend unit tests for core services (RoomService, GameService, ScoringService)
+- [x] Remove outdated CLAUDE_CONTEXT.md from frontend (also added .gitignore)
+- [x] Add backend unit tests for core services (GuessValidator: 30 tests, ScoringService: 28 tests)
 - [ ] Add input validation on frontend before WebSocket sends
 - [ ] Add proper logging with log levels in backend
 
